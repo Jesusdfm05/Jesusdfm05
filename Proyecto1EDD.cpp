@@ -2,9 +2,11 @@
 // Jesus David Florez Morales
 //  V-31.762.806
 
-#include <iostream>
-#include <cstring>
-#include <fstream>
+#include <iostream> //nose
+#include <cstring>  //para manejar el texto
+#include <fstream>  //nose
+#include <cstdlib>  //para los numeros aleatorios
+#include <ctime>    //para el tiempo
 using namespace std;
 
 struct Sector{
@@ -36,12 +38,71 @@ const int MAX_SECTORES = 20;
 int contadorClientes = 0;
 int contadorRepartidores = 0;
 int contadorSectores = 0;
-
 int opcionPrincipal;
 
 Cliente listaClientes[MAX_CLIENTES];
 Repartidor listaRepartidores[MAX_REPARTIDORES];
 Sector listaSectores[MAX_SECTORES];
+
+
+void iniciarJornada() {
+    if (contadorRepartidores == 0 || contadorSectores == 0) {
+        cout << "\nError: No se puede iniciar jornada sin datos cargados" << endl;
+        cout << "Presione Enter para continuar...";
+        cin.ignore(); cin.get();
+        return;
+    }
+    srand(time(NULL));
+
+    for (int i = 0; i < contadorRepartidores; i++) {
+        int indiceAleatorio = rand() % contadorSectores;
+        listaRepartidores[i].Sector = listaSectores[indiceAleatorio].Id;
+        listaRepartidores[i].Disponible = true; 
+    }
+
+    cout << "\nJornada Iniciada. Los motorizados han sido distribuidos por la ciudad de forma aleatoria." << endl;
+    cout << "Presione Enter para continuar...";
+    cin.ignore(); cin.get();
+}
+
+void menuServicioDiario() {
+    int opServicio;
+    do {
+        cout << "\033[2J\033[1;1H";
+        cout << "----- SERVICIO DIARIO-----" << endl;
+        cout << "1. Iniciar Jornada" << endl;
+        cout << "2. Actualizar ubicacion de un repartidor" << endl;
+        cout << "3. Solicitar Envío" << endl;
+        cout << "4. Finalizar Entrega" << endl;
+        cout << "5. Volver al Menu Principal" << endl;
+        cout << "Seleccione una opcion: ";
+        cin >> opServicio;
+
+        switch (opServicio) {
+            case 1: 
+                iniciarJornada(); 
+                break;
+            case 2: 
+                // Aqui ira: actualizarUbicacion(); 
+                cout << "\nProximamente... Presione Enter."; cin.ignore(); cin.get();
+                break;
+            case 3: 
+                // Aqui ira: solicitarEnvio(); 
+                cout << "\nProximamente... Presione Enter."; cin.ignore(); cin.get();
+                break;
+            case 4: 
+                // Aqui ira: finalizarEntrega(); 
+                cout << "\nProximamente... Presione Enter."; cin.ignore(); cin.get();
+                break;
+            case 5: 
+                cout << "Saliendo al menu principal..." << endl; 
+                break;
+            default: 
+                break;
+        }
+    } while (opServicio != 5);
+}
+
 
 void cargarSectores() {
     ifstream archivo("sectores.txt");
@@ -470,12 +531,11 @@ void menuGestionInterna(){
     } while (op != 4);
 }
 
-
 int main(){
     cargarSectores();
     cargarClientes();
     cargarRepartidores();
-    
+
     do{
         cout << "\033[2J\033[1;1H";
         cout <<"-----MENU PRINCIPAL-----"<< endl;
@@ -490,8 +550,7 @@ int main(){
                 menuGestionInterna();
                 break;
             case 2:
-                cout << "Abriendo el servicio diario..." << endl;
-                cin.ignore(); cin.get();
+                menuServicioDiario();
                 break;
             case 3:
                 cout << "\033[2J\033[1;1H";
