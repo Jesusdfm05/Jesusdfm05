@@ -49,7 +49,7 @@ void anadirCliente(){
         return;
     }
     
-    cin.ignore(); // Limpiar el buffer
+    cin.ignore(); 
     cout <<"---Nombre del cliente---"<< endl;
     cin.getline(listaClientes[contadorClientes].Nombre, 30);
     
@@ -57,7 +57,7 @@ void anadirCliente(){
     cin.getline(listaClientes[contadorClientes].Cedula, 10);
     
     cout <<"---N. telefono del cliente---"<< endl;
-    cin.getline(listaClientes[contadorClientes].Telefono, 15); // ¡BUG CORREGIDO AQUÍ!
+    cin.getline(listaClientes[contadorClientes].Telefono, 15); 
     
     listaClientes[contadorClientes].Servicios = 0;
     contadorClientes++;
@@ -93,6 +93,45 @@ void consultarCliente(){
     cin.get();
 }
 
+void eliminarCliente(){
+    if (contadorClientes == 0){ 
+        cout << "\nNo hay clientes registrados en el sistema." << endl;
+        cout << "Presione Enter para continuar...";
+        cin.ignore();
+        cin.get();
+        return;
+    }
+
+    char cedulaBuscar[10];
+    bool encontrado = false;
+    int indiceEliminar = -1;
+
+    cout << "--- Ingrese la Cedula del Cliente a Eliminar ---" << endl;
+    cin.ignore();
+    cin.getline(cedulaBuscar, 10);
+
+    for (int i = 0; i < contadorClientes; i++) {
+        if (strcmp(listaClientes[i].Cedula, cedulaBuscar) == 0) {
+            encontrado = true;
+            indiceEliminar = i;
+            break;
+        }
+    }
+
+    if (encontrado) {
+        for (int i = indiceEliminar; i < contadorClientes - 1; i++) {
+            listaClientes[i] = listaClientes[i + 1];
+        }
+        contadorClientes--;
+        
+        cout << "\nCliente eliminado de forma exitosa del sistema." << endl;
+    } else {
+        cout << "\nError: La cedula ingresada no coincide con ningun cliente." << endl;
+    }
+    cout << "Presione Enter para continuar...";
+    cin.get();
+}
+
 void menuClientes(){
     int opClientes;
     do{
@@ -100,16 +139,18 @@ void menuClientes(){
         cout <<"----- MENU CLIENTES -----"<< endl;
         cout <<"1. Anadir cliente"<< endl;
         cout <<"2. Consultar cliente"<< endl;
-        cout <<"3. Volver al menu anterior"<< endl; 
+        cout <<"3. Eliminar cliente" <<  endl;
+        cout <<"4. Volver al menu anterior"<< endl; 
         cin >> opClientes;
 
         switch (opClientes){
             case 1: anadirCliente(); break;
-            case 2: consultarCliente(); break; 
-            case 3: cout << "Saliendo al menu de gestion..." << endl; break;
+            case 2: consultarCliente(); break;
+            case 3: eliminarCliente(); break; 
+            case 4: cout << "Saliendo al menu de gestion..." << endl; break;
             default: break;
         }
-    } while (opClientes != 3);
+    } while (opClientes != 4);
 }
 
 
@@ -177,6 +218,45 @@ void consultarRepartidor(){
     cin.get();
 }
 
+void eliminarRepartidor(){
+    if (contadorRepartidores == 0){ 
+        cout << "\nNo hay repartidores registrados en el sistema." << endl;
+        cout << "Presione Enter para continuar...";
+        cin.ignore();
+        cin.get();
+        return;
+    }
+
+    char cedulaBuscar[10];
+    bool encontrado = false;
+    int indiceEliminar = -1;
+
+    cout << "--- Ingrese la Cedula del repartidor a Eliminar ---" << endl;
+    cin.ignore();
+    cin.getline(cedulaBuscar, 10);
+
+    for (int i = 0; i < contadorRepartidores; i++) {
+        if (strcmp(listaRepartidores[i].Cedula, cedulaBuscar) == 0) {
+            encontrado = true;
+            indiceEliminar = i;
+            break;
+        }
+    }
+
+    if (encontrado) {
+        for (int i = indiceEliminar; i < contadorRepartidores - 1; i++) {
+            listaRepartidores[i] = listaRepartidores[i + 1];
+        }
+        contadorRepartidores--;
+        
+        cout << "\Repartidor eliminado de forma exitosa del sistema" << endl;
+    } else {
+        cout << "\nError: La cedula ingresada no coincide con ningun repartidor" << endl;
+    }
+    cout << "Presione Enter para continuar...";
+    cin.get();
+}
+
 void menuRepartidores(){
     int opRep;
     do{
@@ -184,16 +264,18 @@ void menuRepartidores(){
         cout <<"----- MENU REPARTIDORES -----"<< endl;
         cout <<"1. Anadir repartidor"<< endl;
         cout <<"2. Consultar repartidor"<< endl;
-        cout <<"3. Volver al menu anterior"<< endl; 
+        cout <<"3. Eliminar repartidor"<< endl;
+        cout <<"4. Volver al menu anterior"<< endl; 
         cin >> opRep;
 
         switch (opRep){
             case 1: anadirRepartidor(); break;
             case 2: consultarRepartidor(); break; 
-            case 3: cout << "Saliendo al menu de gestion..." << endl; break;
+            case 3: consultarRepartidor(); break; 
+            case 4: cout << "Saliendo al menu de gestion..." << endl; break;
             default: break;
         }
-    } while (opRep != 3);
+    } while (opRep != 4);
 }
 
 
