@@ -65,16 +65,100 @@ void iniciarJornada() {
     cin.ignore(); cin.get();
 }
 
+void solicitarEnvio() {
+    if (contadorClientes == 0 || contadorRepartidores == 0) {
+        cout << "\nSe requieren clientes y repartidores registrados" << endl;
+        cout << "Presione Enter..."; 
+        cin.ignore(); cin.get();
+        return;
+    }
+
+    char cedulaCliente[10];
+    int sectorOrigen, sectorDestino;
+    bool clienteExiste = false;
+    int indiceCliente = -1;
+
+    cout << "--- SOLICITAR SERVICIO DE DELIVERY ---" << endl;
+    cin.ignore();
+    cout << "Ingrese la Cedula del Cliente: ";
+    cin.getline(cedulaCliente, 10);
+
+    for (int i = 0; i < contadorClientes; i++) {
+        if (strcmp(listaClientes[i].Cedula, cedulaCliente) == 0) {
+            clienteExiste = true;
+            indiceCliente = i;
+            break;
+        }
+    }
+
+    if (!clienteExiste) {
+        cout << "\n[!] Error: El cliente no esta registrado en Gestion Interna." << endl;
+        cout << "Presione Enter..."; cin.get();
+        return;
+    }
+
+    cout << "Ingrese ID del Sector Origen (Donde se busca el paquete): ";
+    cin >> sectorOrigen;
+    cout << "Ingrese ID del Sector Destino (Donde se entrega): ";
+    cin >> sectorDestino;
+
+    int indicesDisponibles[MAX_REPARTIDORES];
+    int contDisponibles = 0;
+
+    for (int i = 0; i < contadorRepartidores; i++) {
+        if (listaRepartidores[i].Sector == sectorOrigen && listaRepartidores[i].Disponible == true) {
+            indicesDisponibles[contDisponibles] = i;
+            contDisponibles++;
+        }
+    }
+
+    if (contDisponibles == 0) {
+        cout << "\n[NEGACION DE SERVICIO]" << endl;
+        cout << "Lo sentimos, no hay motorizados disponibles en este sector en este momento." << endl;
+        cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
+        return;
+    }
+
+    cout << "\n--- REPARTIDORES DISPONIBLES EN LA ZONA ---" << endl;
+    for (int i = 0; i < contDisponibles; i++) {
+        int idx = indicesDisponibles[i];
+        cout << i + 1 << ". " << listaRepartidores[idx].Nombre 
+             << " | Vehiculo: " << listaRepartidores[idx].Vehiculo 
+             << " (Placa: " << listaRepartidores[idx].Placa << ")" << endl;
+    }
+
+    int seleccion;
+    cout << "\nSeleccione el numero del repartidor de su preferencia: ";
+    cin >> seleccion;
+
+    if (seleccion < 1 || seleccion > contDisponibles) {
+        cout << "\n[!] Seleccion invalida. Operacion abortada." << endl;
+        cout << "Presione Enter..."; cin.ignore(); cin.get();
+        return;
+    }
+
+    int idxElegido = indicesDisponibles[seleccion - 1];
+    
+    listaRepartidores[idxElegido].Disponible = false; // Cambia a Ocupado
+    listaRepartidores[idxElegido].Sector = sectorDestino; // Viaja al destino
+    listaRepartidores[idxElegido].Servicios++; // +1 al record del repartidor
+    listaClientes[indiceCliente].Servicios++; // +1 al record del cliente
+
+    cout << "\n[OK] ¡Envio despachado con exito!" << endl;
+    cout << "El motorizado " << listaRepartidores[idxElegido].Nombre << " va en ruta al destino." << endl;
+    cout << "Presione Enter..."; cin.ignore(); cin.get();
+    cout << "Su entrega a sido realizada con exito" << endl; cin.ignore(); cin.get();
+    listaRepartidores[idxElegido].Disponible == true;
+}
+
 void menuServicioDiario() {
     int opServicio;
     do {
         cout << "\033[2J\033[1;1H";
         cout << "----- SERVICIO DIARIO-----" << endl;
         cout << "1. Iniciar Jornada" << endl;
-        cout << "2. Actualizar ubicacion de un repartidor" << endl;
-        cout << "3. Solicitar Envío" << endl;
-        cout << "4. Finalizar Entrega" << endl;
-        cout << "5. Volver al Menu Principal" << endl;
+        cout << "2. Solicitar Envío" << endl;
+        cout << "3. Volver al Menu Principal" << endl;
         cout << "Seleccione una opcion: ";
         cin >> opServicio;
 
@@ -83,24 +167,14 @@ void menuServicioDiario() {
                 iniciarJornada(); 
                 break;
             case 2: 
-                // Aqui ira: actualizarUbicacion(); 
-                cout << "\nProximamente... Presione Enter."; cin.ignore(); cin.get();
+                solicitarEnvio();
                 break;
             case 3: 
-                // Aqui ira: solicitarEnvio(); 
-                cout << "\nProximamente... Presione Enter."; cin.ignore(); cin.get();
-                break;
-            case 4: 
-                // Aqui ira: finalizarEntrega(); 
-                cout << "\nProximamente... Presione Enter."; cin.ignore(); cin.get();
-                break;
-            case 5: 
-                cout << "Saliendo al menu principal..." << endl; 
                 break;
             default: 
                 break;
         }
-    } while (opServicio != 5);
+    } while (opServicio != 3);
 }
 
 
