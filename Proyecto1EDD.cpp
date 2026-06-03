@@ -43,6 +43,63 @@ Cliente listaClientes[MAX_CLIENTES];
 Repartidor listaRepartidores[MAX_REPARTIDORES];
 Sector listaSectores[MAX_SECTORES];
 
+void cargarSectores() {
+    ifstream archivo("sectores.txt");
+    
+    if (!archivo.is_open()) return; 
+    while (!archivo.eof() && contadorSectores < MAX_SECTORES) {
+        char idStr[10];
+        archivo.getline(idStr, 10, '|');
+        if (strlen(idStr) == 0) break;
+        
+        listaSectores[contadorSectores].Id = atoi(idStr);
+        archivo.getline(listaSectores[contadorSectores].Direccion, 20); 
+        contadorSectores++;
+    }
+    archivo.close();
+}
+
+void cargarClientes() {
+    ifstream archivo("clientes.txt");
+    if (!archivo.is_open()) return;
+
+    while (!archivo.eof() && contadorClientes < MAX_CLIENTES) {
+        archivo.getline(listaClientes[contadorClientes].Cedula, 10, '|');
+        if (strlen(listaClientes[contadorClientes].Cedula) == 0) break;
+        archivo.getline(listaClientes[contadorClientes].Telefono, 15, '|');
+        archivo.getline(listaClientes[contadorClientes].Nombre, 30, '|');
+        char servStr[10];
+        archivo.getline(servStr, 10);
+        listaClientes[contadorClientes].Servicios = atoi(servStr);
+        contadorClientes++;
+    }
+    archivo.close();
+}
+
+void cargarRepartidores() {
+    ifstream archivo("repartidores.txt");
+    if (!archivo.is_open()) return;
+
+    while (!archivo.eof() && contadorRepartidores < MAX_REPARTIDORES) {
+        archivo.getline(listaRepartidores[contadorRepartidores].Cedula, 10, '|');
+        if (strlen(listaRepartidores[contadorRepartidores].Cedula) == 0) break;
+        
+        archivo.getline(listaRepartidores[contadorRepartidores].Nombre, 30, '|');
+        archivo.getline(listaRepartidores[contadorRepartidores].Vehiculo, 20, '|');
+        archivo.getline(listaRepartidores[contadorRepartidores].Placa, 10, '|');
+        
+        char secStr[10], servStr[10], dispStr[10];
+        archivo.getline(secStr, 10, '|');
+        archivo.getline(servStr, 10, '|');
+        archivo.getline(dispStr, 10); 
+        listaRepartidores[contadorRepartidores].Sector = atoi(secStr);
+        listaRepartidores[contadorRepartidores].Servicios = atoi(servStr);
+        listaRepartidores[contadorRepartidores].Disponible = (atoi(dispStr) == 1);
+        contadorRepartidores++;
+    }
+    archivo.close();
+}
+
 void guardarSectores() {
     ofstream archivo("sectores.txt");
     
@@ -415,6 +472,10 @@ void menuGestionInterna(){
 
 
 int main(){
+    cargarSectores();
+    cargarClientes();
+    cargarRepartidores();
+    
     do{
         cout << "\033[2J\033[1;1H";
         cout <<"-----MENU PRINCIPAL-----"<< endl;
