@@ -424,7 +424,7 @@ void eliminarRepartidor(){
         }
         contadorRepartidores--;
         
-        cout << "\Repartidor eliminado de forma exitosa del sistema" << endl;
+        cout << "Repartidor eliminado de forma exitosa del sistema" << endl;
     } else {
         cout << "\nError: La cedula ingresada no coincide con ningun repartidor" << endl;
     }
