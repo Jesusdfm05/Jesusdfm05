@@ -1,3 +1,7 @@
+// S/C julio de 2026
+// Jesus David Florez Morales
+//  V-31.762.806
+
 #include <iostream>
 #include <cstring>
 #include <fstream>
@@ -38,6 +42,59 @@ int opcionPrincipal;
 Cliente listaClientes[MAX_CLIENTES];
 Repartidor listaRepartidores[MAX_REPARTIDORES];
 Sector listaSectores[MAX_SECTORES];
+
+void guardarSectores() {
+    ofstream archivo("sectores.txt");
+    
+    if (!archivo.is_open()) {
+        cout << "Error critico: No se pudo guardar sectores.txt" << endl;
+        return;
+    }
+    
+    for (int i = 0; i < contadorSectores; i++) {
+        archivo << listaSectores[i].Id << "|"
+                << listaSectores[i].Direccion << endl;
+    }
+    archivo.close();
+}
+
+void guardarClientes() {
+    ofstream archivo("clientes.txt");
+    
+    if (!archivo.is_open()) {
+        cout << "Error critico: No se pudo guardar clientes.txt" << endl;
+        return;
+    }
+    
+    for (int i = 0; i < contadorClientes; i++) {
+        archivo << listaClientes[i].Cedula << "|"
+                << listaClientes[i].Telefono << "|"
+                << listaClientes[i].Nombre << "|"
+                << listaClientes[i].Servicios << endl;
+    }
+    archivo.close();
+}
+
+void guardarRepartidores() {
+    ofstream archivo("repartidores.txt");
+    
+    if (!archivo.is_open()) {
+        cout << "Error critico: No se pudo guardar repartidores.txt" << endl;
+        return;
+    }
+    
+    for (int i = 0; i < contadorRepartidores; i++) {
+        archivo << listaRepartidores[i].Cedula << "|"
+                << listaRepartidores[i].Nombre << "|"
+                << listaRepartidores[i].Vehiculo << "|"
+                << listaRepartidores[i].Placa << "|"
+                << listaRepartidores[i].Sector << "|"
+                << listaRepartidores[i].Servicios << "|"
+                // Convertimos el bool a entero (1 o 0) para el archivo de texto
+                << (listaRepartidores[i].Disponible ? 1 : 0) << endl;
+    }
+    archivo.close();
+}
 
 
 void anadirCliente(){
@@ -376,8 +433,20 @@ int main(){
                 cin.ignore(); cin.get();
                 break;
             case 3:
-                cout << "Cerrando el sistema..." << endl;
-                break;
+                cout << "\033[2J\033[1;1H";
+                cout << "=== RESPALDANDO HARDWARE DE DATOS ===" << endl;
+                cout << "Guardando clientes..." << endl;
+                guardarClientes();
+                
+                cout << "Guardando repartidores..." << endl;
+                guardarRepartidores();
+                
+                cout << "Guardando sectores de cobertura..." << endl;
+                guardarSectores();
+                
+                cout << "\nDatos guardados con exito en el disco duro" << endl;
+                cout << "Cerrando el sistema SpeedDelivery..." << endl;
+            break;
             default:
                 break;
         }
