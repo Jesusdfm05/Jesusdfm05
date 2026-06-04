@@ -157,7 +157,7 @@ void menuServicioDiario() {
         cout << "\033[2J\033[1;1H";
         cout << "----- SERVICIO DIARIO-----" << endl;
         cout << "1. Iniciar Jornada" << endl;
-        cout << "2. Solicitar Envío" << endl;
+        cout << "2. Solicitar Envio" << endl;
         cout << "3. Volver al Menu Principal" << endl;
         cout << "Seleccione una opcion: ";
         cin >> opServicio;

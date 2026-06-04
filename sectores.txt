@@ -1,2 +1,6 @@
 1|Tariba
 2|Barrancas
+3|La Ermita
+4|Santa Teresa
+5|Pueblo Nuevo
+6|La Popa
