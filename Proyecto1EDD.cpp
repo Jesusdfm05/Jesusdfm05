@@ -1,12 +1,15 @@
+// San Cristobal, Junio de 2026
 //Jesus David Florez Morales V-31.762.806
 
-#include <iostream> //nose
-#include <cstring>  //para manejar el texto
-#include <fstream>  //nose
-#include <cstdlib>  //para los numeros aleatorios
-#include <ctime>    //para el tiempo
+//Iniciamos añadiendo las librerias necesarias
+#include <iostream>
+#include <cstring>  
+#include <fstream>  
+#include <cstdlib>  
+#include <ctime>    
 using namespace std;
 
+//Creamos las estructuras necesarias para cada entidad
 struct Sector{
     int Id;
     char Direccion[20];
@@ -29,6 +32,7 @@ struct Repartidor{
     bool Disponible;
 };
 
+//Declaramos las constantes iniciales para cada entidad
 const int MAX_CLIENTES = 50;
 const int MAX_REPARTIDORES = 50;
 const int MAX_SECTORES = 20;
@@ -42,7 +46,9 @@ Cliente listaClientes[MAX_CLIENTES];
 Repartidor listaRepartidores[MAX_REPARTIDORES];
 Sector listaSectores[MAX_SECTORES];
 
+//teniendo lo anterior listo empezaremos a crear los metodos para cada parte de los menus
 
+//Metetodo para revisar los archivos guardados y iniciar el dia con los repartidores en ubicaciones aleatorias
 void iniciarJornada() {
     if (contadorRepartidores == 0 || contadorSectores == 0) {
         cout << "\nError: No se puede iniciar jornada sin datos cargados" << endl;
@@ -63,6 +69,7 @@ void iniciarJornada() {
     cin.ignore(); cin.get();
 }
 
+//Metodo para al guardar y salir se genere un reporte diario
 void generarReporteEstadisticas() {
     ofstream archivo("reporte_estadisticas.txt");
     if (!archivo.is_open()) return;
@@ -99,6 +106,7 @@ void generarReporteEstadisticas() {
     archivo.close();
 }
 
+//Metodo para solicitar un envio como cliente
 void solicitarEnvio() {
     if (contadorClientes == 0 || contadorRepartidores == 0) {
         cout << "\nSe requieren clientes y repartidores registrados" << endl;
@@ -186,6 +194,7 @@ void solicitarEnvio() {
     cin.get();
 }
 
+//Metodo que nos muestra las opciones de servicio diario (dentro del menu principal)
 void menuServicioDiario() {
     int opServicio;
     do {
@@ -212,7 +221,7 @@ void menuServicioDiario() {
     } while (opServicio != 3);
 }
 
-
+//Estos tres metodos son para cargar la informacion guardada en archivos de texto
 void cargarSectores() {
     ifstream archivo("sectores.txt");
     
@@ -270,6 +279,8 @@ void cargarRepartidores() {
     archivo.close();
 }
 
+
+// y estos otros tres son para guardar nueva informacion en los archivos existentes
 void guardarSectores() {
     ofstream archivo("sectores.txt");
     
@@ -324,6 +335,8 @@ void guardarRepartidores() {
 }
 
 
+//en estos metodos encontramos el submenu (dentro de gestion interna)
+//para realizar funciones con los clientes dentro del submenu para clientes
 void anadirCliente(){
     if (contadorClientes >= MAX_CLIENTES){
         cout << "\nYa no caben mas clientes!" << endl;
@@ -437,7 +450,7 @@ void menuClientes(){
     } while (opClientes != 4);
 }
 
-
+//De igual manera con los repartidores
 void anadirRepartidor(){
     if (contadorRepartidores >= MAX_REPARTIDORES){
         cout << "\nCapacidad de repartidores al maximo!" << endl;
@@ -562,7 +575,7 @@ void menuRepartidores(){
     } while (opRep != 4);
 }
 
-
+//Y de igual manera con los sectores
 void anadirSector(){
     if (contadorSectores >= MAX_SECTORES){
         cout << "\nLimite de sectores alcanzado!" << endl;
@@ -618,7 +631,7 @@ void menuSectores(){
     } while (opSec != 3);
 }
 
-
+//En este tenemos el submenu de gestion interna
 void menuGestionInterna(){
     int op;
     do{
@@ -639,6 +652,9 @@ void menuGestionInterna(){
         }
     } while (op != 4);
 }
+
+// Quedariamos con la estructura main -> gestionInterna -> Clientes/Repartidores/Sectores
+// o en su otra rama main -> servicioDiario -> solicitarEnvio
 
 int main(){
     cargarSectores();
