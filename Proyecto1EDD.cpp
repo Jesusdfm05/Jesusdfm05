@@ -1,6 +1,4 @@
-// S/C julio de 2026
-// Jesus David Florez Morales
-//  V-31.762.806
+//Jesus David Florez Morales V-31.762.806
 
 #include <iostream> //nose
 #include <cstring>  //para manejar el texto
@@ -63,6 +61,42 @@ void iniciarJornada() {
     cout << "\nJornada Iniciada. Los motorizados han sido distribuidos por la ciudad de forma aleatoria." << endl;
     cout << "Presione Enter para continuar...";
     cin.ignore(); cin.get();
+}
+
+void generarReporteEstadisticas() {
+    ofstream archivo("reporte_estadisticas.txt");
+    if (!archivo.is_open()) return;
+
+    archivo << "=========================================" << endl;
+    archivo << "   SPEEDDELIVERY - REPORTE DE JORNADA    " << endl;
+    archivo << "=========================================" << endl;
+
+    int maxServiciosCliente = -1;
+    for(int i = 0; i < contadorClientes; i++) {
+        if(listaClientes[i].Servicios > maxServiciosCliente) {
+            maxServiciosCliente = listaClientes[i].Servicios;
+        }
+    }
+    archivo << "\n[CLIENTE(S) MAS FRECUENTES] (Max Servicios: " << maxServiciosCliente << ")" << endl;
+    for(int i = 0; i < contadorClientes; i++) {
+        if(listaClientes[i].Servicios == maxServiciosCliente && maxServiciosCliente > 0) {
+            archivo << "- " << listaClientes[i].Nombre << " (Cedula: " << listaClientes[i].Cedula << ")" << endl;
+        }
+    }
+
+    int maxServiciosRep = -1;
+    for(int i = 0; i < contadorRepartidores; i++) {
+        if(listaRepartidores[i].Servicios > maxServiciosRep) {
+            maxServiciosRep = listaRepartidores[i].Servicios;
+        }
+    }
+    archivo << "\n[REPARTIDOR(ES) ESTRELLA] (Max Entregas: " << maxServiciosRep << ")" << endl;
+    for(int i = 0; i < contadorRepartidores; i++) {
+        if(listaRepartidores[i].Servicios == maxServiciosRep && maxServiciosRep > 0) {
+            archivo << "- " << listaRepartidores[i].Nombre << " (Placa: " << listaRepartidores[i].Placa << ")" << endl;
+        }
+    }
+    archivo.close();
 }
 
 void solicitarEnvio() {
@@ -139,16 +173,17 @@ void solicitarEnvio() {
 
     int idxElegido = indicesDisponibles[seleccion - 1];
     
-    listaRepartidores[idxElegido].Disponible = false; // Cambia a Ocupado
-    listaRepartidores[idxElegido].Sector = sectorDestino; // Viaja al destino
-    listaRepartidores[idxElegido].Servicios++; // +1 al record del repartidor
-    listaClientes[indiceCliente].Servicios++; // +1 al record del cliente
+    listaRepartidores[idxElegido].Sector = sectorDestino; 
+    listaRepartidores[idxElegido].Servicios++;                                                                                           
+    listaClientes[indiceCliente].Servicios++;             
 
-    cout << "\n[OK] ¡Envio despachado con exito!" << endl;
-    cout << "El motorizado " << listaRepartidores[idxElegido].Nombre << " va en ruta al destino." << endl;
-    cout << "Presione Enter..."; cin.ignore(); cin.get();
-    cout << "Su entrega a sido realizada con exito" << endl; cin.ignore(); cin.get();
-    listaRepartidores[idxElegido].Disponible == true;
+    cout << "\nEnvio despachado con exito!" << endl;
+    cout << "El motorizado " << listaRepartidores[idxElegido].Nombre << " se movio al sector " << sectorDestino << endl;
+    cout << "Entrega realizada con exito de forma inmediata" << endl;
+    
+    cout << "\nPresione Enter para continuar..."; 
+    cin.ignore(); 
+    cin.get();
 }
 
 void menuServicioDiario() {
@@ -520,7 +555,7 @@ void menuRepartidores(){
         switch (opRep){
             case 1: anadirRepartidor(); break;
             case 2: consultarRepartidor(); break; 
-            case 3: consultarRepartidor(); break; 
+            case 3: eliminarRepartidor(); break; 
             case 4: cout << "Saliendo al menu de gestion..." << endl; break;
             default: break;
         }
@@ -629,17 +664,11 @@ int main(){
             case 3:
                 cout << "\033[2J\033[1;1H";
                 cout << "=== RESPALDANDO HARDWARE DE DATOS ===" << endl;
-                cout << "Guardando clientes..." << endl;
+                generarReporteEstadisticas();
                 guardarClientes();
-                
-                cout << "Guardando repartidores..." << endl;
                 guardarRepartidores();
-                
-                cout << "Guardando sectores de cobertura..." << endl;
                 guardarSectores();
-                
-                cout << "\nDatos guardados con exito en el disco duro" << endl;
-                cout << "Cerrando el sistema SpeedDelivery..." << endl;
+                cout << "\nDatos y reporte estadistico guardados con exito." << endl;
             break;
             default:
                 break;
