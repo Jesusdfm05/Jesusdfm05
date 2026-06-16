@@ -253,3 +253,46 @@ bool buscarEstudianteEnlazado(const std::string& ruta, long int primerNodoByte, 
     return false; 
 }
 ```
+
+## 2. MÉTODOS DE ORDENACIÓN
+
+### 2.1. Introducción a la Ordenación de Datos
+La ordenación o clasificación de datos consiste en la operación de organizar un conjunto de elementos en una secuencia lineal determinada basada en un criterio específico (comúnmente un orden numérico o alfabético de carácter ascendente o descendente). En las ciencias de la computación y gestión de bases de datos, es una operación fundamental debido a que el software optimiza drásticamente sus procesos de acceso a la información y sus tasas de éxito en la recuperación de datos si estos se encuentran estructurados metódicamente.
+
+### 2.2. Clasificación: Ordenación Interna vs. Externa
+El volumen total de los datos dictamina la elección de la categoría del algoritmo de ordenamiento:
+
+* **Ordenación Interna:** Se ejecuta íntegramente dentro de la memoria RAM. Es la solución óptima cuando la magnitud del conjunto de datos permite cargarlo por completo en memoria simultáneamente. Destaca por su velocidad de procesamiento, dado que las operaciones de manipulación directa e intercambio de variables en RAM toman fracciones de tiempo mínimas comparadas con los retardos mecánicos o electrónicos de los discos. Su principal restricción es el límite físico de capacidad de la memoria principal.
+* **Ordenación Externa:** Se activa obligatoriamente cuando el volumen de información excede la capacidad de retención de la memoria RAM. El algoritmo requiere el uso coordinado de almacenamiento masivo secundario para albergar archivos temporales de trabajo. La prioridad de diseño en estos algoritmos se centra en **minimizar la tasa de accesos (lectura/escritura) a disco**, debido a la lentitud de estos periféricos. Emplean estrategias avanzadas de "Divide y Vencerás", procesando fracciones o tramos legibles de datos en memoria para luego fusionar las partes en un único archivo consolidado.
+
+---
+
+### 2.3. Métodos de Ordenación Interna (Memoria RAM)
+
+#### 2.3.1. Ordenamiento por Burbuja (Bubble Sort)
+* **Mecanismo Operativo:** Funciona mediante pasadas cíclicas sobre la estructura, comparando pares de elementos adyacentes e intercambiándolos de posición si se encuentran en el orden incorrecto. El proceso provoca que los elementos más grandes "floten" gradualmente hacia el extremo derecho del arreglo en cada iteración completa.
+* **Criterio de Selección:** Didáctico. Solo es aceptable en entornos reales para colecciones de datos extremadamente pequeñas o vectores que ya están casi completamente ordenados.
+* **Complejidad Algorítmica:**
+  * Peor caso y caso promedio: $O(n^2)$
+  * Mejor caso (con bandera de optimización): $O(n)$
+
+```cpp
+struct EstudianteUNET {
+    int cedula;
+    std::string nombre;
+    float promedio;
+};
+
+void ordenarBurbuja(EstudianteUNET arr[], int n) {
+    bool intercambiado;
+    for (int i = 0; i < n - 1; i++) {
+        intercambiado = false;
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j].cedula > arr[j + 1].cedula) {
+                std::swap(arr[j], arr[j + 1]);
+                intercambiado = true;
+            }
+        }
+        if (!intercambiado) break;
+    }
+}
