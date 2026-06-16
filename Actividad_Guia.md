@@ -1,4 +1,4 @@
-# GUÍA TÉCNICA: MÉTODOS DE BÚSQUEDA (ESTRUCTURAS DE DATOS)
+# GUÍA TÉCNICA: ESTRUCTURAS DE DATOS
 
 Esta guía técnica compila los fundamentos teóricos, mecanismos operativos y criterios de eficiencia computacional para la recuperación de información en entornos de software, estructurada bajo los requerimientos de la Universidad Nacional Experimental del Táchira (UNET).
 
@@ -23,8 +23,6 @@ Los métodos de búsqueda se clasifican según la ubicación física de los dato
 * **Búsqueda Interna:** Se realiza sobre datos almacenados en la **memoria principal (RAM)** del ordenador utilizando estructuras estáticas o dinámicas (arreglos, listas, árboles). Destaca por su alta velocidad debido al acceso aleatorio directo de la memoria.
 * **Búsqueda Externa:** Se ejecuta sobre datos residentes en dispositivos de **almacenamiento secundario** (disco duro, unidades de estado sólido, pendrives) organizados en archivos binarios o de texto. Está supeditada a la latencia de las operaciones de Entrada/Salida (E/S), por lo que busca minimizar los accesos al medio físico.
 
----
-
 ### 1.3. Métodos de Búsqueda Interna (Memoria RAM)
 
 #### 1.3.1. Búsqueda Secuencial o Lineal
@@ -48,8 +46,6 @@ Los métodos de búsqueda se clasifican según la ubicación física de los dato
 * **Complejidad Algorítmica:**
   * Caso promedio y mejor caso: $O(1)$
   * Peor caso (alta tasa de colisiones): $O(n)$
-
----
 
 ### 1.4. Métodos de Búsqueda Externa (Archivos)
 
