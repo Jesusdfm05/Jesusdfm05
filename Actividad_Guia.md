@@ -17,11 +17,13 @@ El resultado de este proceso se divide en dos escenarios:
 
 En la práctica, las búsquedas se realizan preferentemente sobre datos ordenados (por ejemplo, clasificados ascendentemente) para facilitar y acelerar la localización de la información. Sin embargo, también existen métodos diseñados para operar sobre estructuras no ordenadas cuando el costo de ordenar los datos es prohibitivo.
 
+
 ### 1.2. Clasificación: Búsqueda Interna vs. Externa
 Los métodos de búsqueda se clasifican según la ubicación física de los datos dentro de la arquitectura del computador:
 
 * **Búsqueda Interna:** Se realiza sobre datos almacenados en la **memoria principal (RAM)** del ordenador utilizando estructuras estáticas o dinámicas (arreglos, listas, árboles). Destaca por su alta velocidad debido al acceso aleatorio directo de la memoria.
 * **Búsqueda Externa:** Se ejecuta sobre datos residentes en dispositivos de **almacenamiento secundario** (disco duro, unidades de estado sólido, pendrives) organizados en archivos binarios o de texto. Está supeditada a la latencia de las operaciones de Entrada/Salida (E/S), por lo que busca minimizar los accesos al medio físico.
+
 
 ### 1.3. Métodos de Búsqueda Interna (Memoria RAM)
 
@@ -31,6 +33,29 @@ Los métodos de búsqueda se clasifican según la ubicación física de los dato
 * **Criterio de Selección:** Ideal para colecciones de datos pequeñas, estructuras dinámicas basadas en punteros (como listas enlazadas simples) o cuando los datos no están ordenados y no se justifica el costo de ordenarlos.
 * **Complejidad Algorítmica:** * Peor caso y caso promedio: $O(n)$
   * Mejor caso: $O(1)$
+
+```cpp
+#include <iostream>
+#include <string>
+
+struct EstudianteUNET {
+    int cedula;
+    std::string nombre;
+    float indiceAcademico;
+};
+
+int buscarPorCedulaLineal(const EstudianteUNET lista[], int n, int cedulaBuscada) {
+    for (int i = 0; i < n; i++) {
+        if (lista[i].cedula == cedulaBuscada) {
+            return i; 
+        }
+        if (lista[i].cedula > cedulaBuscada) {
+            break; 
+        }
+    }
+    return -1; 
+}
+```
 
 #### 1.3.2. Búsqueda Binaria
 * **Mecanismo Operativo:** Utiliza el paradigma "Divide y Vencerás". Calcula la posición central del intervalo de búsqueda y compara el elemento central con la clave. Si no son iguales, reduce el intervalo a la mitad: si la clave es mayor, redefine el límite inferior; si es menor, redefine el límite superior. El ciclo se repite hasta hallar el elemento o hasta que el intervalo sea nulo.
@@ -46,6 +71,7 @@ Los métodos de búsqueda se clasifican según la ubicación física de los dato
 * **Complejidad Algorítmica:**
   * Caso promedio y mejor caso: $O(1)$
   * Peor caso (alta tasa de colisiones): $O(n)$
+
 
 ### 1.4. Métodos de Búsqueda Externa (Archivos)
 
