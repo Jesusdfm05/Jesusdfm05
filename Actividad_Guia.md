@@ -296,3 +296,367 @@ void ordenarBurbuja(EstudianteUNET arr[], int n) {
         if (!intercambiado) break;
     }
 }
+```
+
+#### 2.3.2. Ordenamiento por Selección (Selection Sort)
+* **Mecanismo Operativo:** Recorre el arreglo buscando recursivamente el elemento menor de toda la estructura y lo transfiere al inicio (posición cero) mediante un intercambio directo. En la siguiente pasada, busca el menor del subarreglo restante y lo posiciona en la celda subsiguiente, continuando de forma sucesiva hasta el último componente.
+* **Criterio de Selección:** Preferible sobre la burbuja cuando el costo de escribir o mover las estructuras en memoria es alto, ya que realiza como máximo $O(n)$ intercambios físicos de registros.
+* **Complejidad Algorítmica:**
+  * Peor caso, caso promedio y mejor caso: $O(n^2)$
+
+```cpp
+void ordenarSeleccion(EstudianteUNET arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        int indiceMaximo = i;
+        for (int j = i + 1; j < n; j++) {
+            if (arr[j].promedio > arr[indiceMaximo].promedio) {
+                indiceMaximo = j;
+            }
+        }
+        if (indiceMaximo != i) {
+            std::swap(arr[i], arr[indiceMaximo]);
+        }
+    }
+}
+```
+
+#### 2.3.3. Ordenamiento por Inserción (Insertion Sort)
+* **Mecanismo Operativo:** Modela el comportamiento humano clásico al organizar elementos manualmente (como barajar cartas). El algoritmo evalúa cada elemento desde la segunda posición y lo desplaza hacia la izquierda, insertándolo en el punto exacto relativo que le corresponde entre los elementos que ya han sido previamente ordenados.
+* **Criterio de Selección:** Altamente eficiente para conjuntos de datos pequeños o como algoritmo de terminación para métodos más complejos. Es un algoritmo de ordenamiento estable (mantiene el orden relativo de elementos con claves iguales).
+* **Complejidad Algorítmica:**
+  * Peor caso y caso promedio: $O(n^2)$
+  * Mejor caso (datos ya ordenados): $O(n)$
+
+```cpp
+void ordenarInsercion(EstudianteUNET arr[], int n) {
+    for (int i = 1; i < n; i++) {
+        EstudianteUNET clave = arr[i];
+        int j = i - 1;
+
+        while (j >= 0 && arr[j].cedula > clave.cedula) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = clave;
+    }
+}
+```
+
+#### 2.3.4. Shell Sort
+* **Mecanismo Operativo:** Se define como una optimización del método de inserción directa. Reduce el total de desplazamientos comparando y ordenando elementos que se encuentran separados por una distancia o brecha (*gap*) decreciente, en lugar de evaluar únicamente elementos contiguos. Al final, realiza una pasada con una brecha de tamaño uno, garantizando el ordenamiento definitivo.
+* **Criterio de Selección:** Eficiente para arreglos de tamaño moderado. No requiere la sobrecarga de memoria de la recursividad ni estructuras auxiliares masivas.
+* **Complejidad Algorítmica:** Depende directamente de la secuencia de brechas elegida. Convencionalmente oscila entre $O(n^{1.5})$ y $O(n^2)$.
+
+```cpp
+void ordenarShell(EstudianteUNET arr[], int n) {
+    for (int gap = n / 2; gap > 0; gap /= 2) {
+        for (int i = gap; i < n; i++) {
+            EstudianteUNET temporal = arr[i];
+            int j;
+
+            for (j = i; j >= gap && arr[j - gap].cedula > temporal.cedula; j -= gap) {
+                arr[j] = arr[j - gap];
+            }
+            arr[j] = temporal;
+        }
+    }
+}
+```
+
+#### 2.3.5. Quick Sort
+* **Mecanismo Operativo:** Algoritmo de alta eficiencia basado en el paradigma "Divide y Vencerás". Selecciona un elemento del vector llamado **pivote** y reorganiza los componentes de modo que todos los datos menores al pivote queden a su izquierda y los mayores a su derecha (proceso de partición). Posteriormente, aplica el algoritmo de forma recursiva a los dos subarreglos resultantes.
+* **Criterio de Selección:** Es el estándar general para ordenamiento en memoria RAM debido a su velocidad en el caso promedio. No se recomienda si se requiere un algoritmo estable o si existe riesgo real de caer en su peor caso.
+* **Complejidad Algorítmica:**
+  * Caso promedio y mejor caso: $O(n \log n)$
+  * Peor caso (pivote pésimamente elegido sobre datos preordenados): $O(n^2)$
+
+```cpp
+int particionPromedio(EstudianteUNET arr[], int bajo, int alto) {
+    float pivote = arr[alto].promedio; 
+    int i = (bajo - 1); 
+
+    for (int j = bajo; j <= alto - 1; j++) {
+        if (arr[j].promedio > pivote) {
+            i++; 
+            std::swap(arr[i], arr[j]);
+        }
+    }
+    std::swap(arr[i + 1], arr[alto]);
+    return (i + 1);
+}
+
+void ordenarQuickSort(EstudianteUNET arr[], int bajo, int alto) {
+    if (bajo < alto) {
+        int indiceParticion = particionPromedio(arr, bajo, alto);
+        ordenarQuickSort(arr, bajo, indiceParticion - 1);
+        ordenarQuickSort(arr, indiceParticion + 1, alto);
+    }
+}
+```
+
+#### 2.3.6. Radix Sort
+* **Mecanismo Operativo:** Algoritmo que no emplea comparaciones directas entre claves. Procesa los elementos descomponiendo los valores numéricos de forma posicional, distribuyéndolos en contenedores lógicos desde el dígito menos significativo (unidades) hasta el de mayor peso (decenas, centenas), apoyándose internamente en un ordenamiento estable como Counting Sort para procesar cada posición de los dígitos.
+* **Precondición:** Funciona sobre claves de tipo entero o valores discretos característicos.
+* **Criterio de Selección:** Ideal cuando las claves de ordenamiento son números enteros con un número fijo y limitado de dígitos (como las cédulas de identidad o códigos de carrera), logrando superar la barrera teórica de los algoritmos de comparación.
+* **Complejidad Algorítmica:**
+  * Peor caso, caso promedio y mejor caso: $O(d \cdot (n + k))$, donde $d$ es el número de dígitos y $k$ la base de numeración (sistema decimal, $k=10$).
+
+```cpp
+int obtenerMaxCedula(EstudianteUNET arr[], int n) {
+    int maximo = arr[0].cedula;
+    for (int i = 1; i < n; i++) {
+        if (arr[i].cedula > maximo) maximo = arr[i].cedula;
+    }
+    return maximo;
+}
+
+void countingSortPorDigito(EstudianteUNET arr[], int n, int exp) {
+    EstudianteUNET* salida = new EstudianteUNET[n];
+    int conteo[10] = {0};
+
+    for (int i = 0; i < n; i++) {
+        conteo[(arr[i].cedula / exp) % 10]++;
+    }
+    for (int i = 1; i < 10; i++) {
+        conteo[i] += conteo[i - 1];
+    }
+    for (int i = n - 1; i >= 0; i--) {
+        int digito = (arr[i].cedula / exp) % 10;
+        salida[conteo[digito] - 1] = arr[i];
+        conteo[digito]--;
+    }
+    for (int i = 0; i < n; i++) {
+        arr[i] = salida[i];
+    }
+    delete[] salida;
+}
+
+void ordenarRadix(EstudianteUNET arr[], int n) {
+    int m = obtenerMaxCedula(arr, n);
+    for (int exp = 1; m / exp > 0; exp *= 10) {
+        countingSortPorDigito(arr, n, exp);
+    }
+}
+```
+
+### 2.4. Métodos de Ordenación Externa (Archivos Binarios)
+
+#### 2.4.1. Mezcla Directa (Straight Merge)
+* **Mecanismo Operativo:** Es el algoritmo base de la ordenación en almacenamiento secundario. Funciona dividiendo el proceso en fases repetitivas de partición y fusión. En la partición, el archivo original se divide en dos archivos auxiliares (por ejemplo, F1 y F2), distribuyendo los registros en secuencias de tamaño fijo balanceado (inicialmente de tamaño 1). En la fusión, se leen en paralelo los elementos de ambos archivos temporales, combinándolos de forma ordenada en tramos del doble de tamaño (tamaño 2) en el archivo de salida. El ciclo completo se repite duplicando el tamaño de los tramos (1, 2, 4, 8, 16...) en cada fase, hasta que una sola secuencia abarque la totalidad de los registros.
+* **Criterio de Selección:** Se emplea cuando el volumen de datos de los estudiantes excede por completo la memoria RAM disponible y se requiere un algoritmo predecible y sistemático de implementar en sistemas de archivos básicos.
+* **Complejidad Algorítmica:** Está ligada directamente al número de pasadas necesarias sobre el archivo, siendo del orden de $O(n \log n)$ operaciones de lectura/escritura en disco.
+
+```cpp
+struct EstudianteUNET {
+    int cedula;
+    char nombre[50];
+    float promedio;
+};
+
+// Distribuye los registros del archivo original en secuencias de tamaño 'tramos' en F1 y F2
+void particionDirecta(const std::string& orig, const std::string& f1, const std::string& f2, int tramos) {
+    std::ifstream archivoOrig(orig, std::ios::binary);
+    std::ofstream archivoF1(f1, std::ios::binary);
+    std::ofstream archivoF2(f2, std::ios::binary);
+
+    EstudianteUNET est;
+    int contador = 0;
+    bool escribirEnF1 = true;
+
+    while (archivoOrig.read(reinterpret_cast<char*>(&est), sizeof(EstudianteUNET))) {
+        if (escribirEnF1) {
+            archivoF1.write(reinterpret_cast<char*>(&est), sizeof(EstudianteUNET));
+        } else {
+            archivoF2.write(reinterpret_cast<char*>(&est), sizeof(EstudianteUNET));
+        }
+        
+        contador++;
+        if (contador == tramos) {
+            contador = 0;
+            escribirEnF1 = !escribirEnF1; // Alterna el archivo de destino por tramo
+        }
+    }
+}
+
+// Fusiona los tramos de F1 y F2 de forma ordenada en el archivo original
+bool fusionDirecta(const std::string& orig, const std::string& f1, const std::string& f2, int tramos) {
+    std::ofstream archivoOrig(orig, std::ios::binary);
+    std::ifstream archivoF1(f1, std::ios::binary);
+    std::ifstream archivoF2(f2, std::ios::binary);
+
+    EstudianteUNET est1, est2;
+    bool leerF1 = true, leerF2 = true;
+    bool hayDatosF1 = false, hayDatosF2 = false;
+    bool huboFusiones = false;
+
+    hayDatosF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+    hayDatosF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+
+    while (hayDatosF1 || hayDatosF2) {
+        int c1 = 0, c2 = 0;
+        huboFusiones = true;
+
+        // Mezcla dos tramos específicos
+        while ((hayDatosF1 && c1 < tramos) && (hayDatosF2 && c2 < tramos)) {
+            if (est1.cedula <= est2.cedula) {
+                archivoOrig.write(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+                hayDatosF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+                c1++;
+            } else {
+                archivoOrig.write(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+                hayDatosF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+                c2++;
+            }
+        }
+
+        // Vacía los elementos restantes del tramo de F1 si F2 terminó su tramo
+        while (hayDatosF1 && c1 < tramos) {
+            archivoOrig.write(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+            hayDatosF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+            c1++;
+        }
+
+        // Vacía los elementos restantes del tramo de F2 si F1 terminó su tramo
+        while (hayDatosF2 && c2 < tramos) {
+            archivoOrig.write(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+            hayDatosF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+            c2++;
+        }
+    }
+    return huboFusiones;
+}
+
+// Algoritmo principal de Mezcla Directa
+void ordenarMezclaDirecta(const std::string& archivoOriginal) {
+    std::string f1 = "temporal1.dat";
+    std::string f2 = "temporal2.dat";
+    int tramos = 1;
+    bool continuar = true;
+
+    // Supongamos que el archivo tiene N registros. El bucle corre hasta que el tamaño del tramo arrope todo
+    while (continuar) {
+        particionDirecta(archivoOriginal, f1, f2, tramos);
+        continuar = fusionDirecta(archivoOriginal, f1, f2, tramos);
+        tramos *= 2; // Duplica el tamaño del tramo lógicamente
+        
+        // Condición de parada real si una sola fusión procesó todo
+        std::ifstream f(f1, std::ios::binary | std::ios::ate);
+        if (f.tellg() == 0) break; 
+    }
+}
+```
+
+#### 2.4.2. Mezcla Natural o Equilibrada (Natural Merge)
+* **Mecanismo Operativo:** Constituye una optimización avanzada de la mezcla directa. Su objetivo primordial es reducir el número de accesos y pasadas por disco aprovechando las secuencias ordenadas que ya existen de forma nativa (tramos naturales) en el archivo original. En lugar de forzar un tamaño de tramo rígido y artificial que se duplica matemáticamente, el algoritmo detecta activamente cuándo se rompe el orden ascendente en los registros del archivo para delimitar los bloques. Luego, realiza la partición y posterior fusión combinando de forma adaptativa estos tramos de tamaño variable hasta que el archivo queda unificado y completamente consolidado.
+* **Criterio de Selección:** Es sustancialmente superior a la mezcla directa cuando se trabaja con archivos de datos reales que ya poseen cierto grado de ordenamiento previo (por ejemplo, un listado de estudiantes que se actualiza periódicamente o que viene parcialmente ordenado por número de cédula), disminuyendo drásticamente el desgaste y la latencia del disco.
+* **Complejidad Algorítmica:** En el peor de los casos (datos en orden inverso) iguala a la mezcla directa con $O(n \log n)$, pero en el mejor caso (archivo ya ordenado) su eficiencia se aproxima a $O(n)$ en accesos a disco.
+
+```cpp
+struct EstudianteUNET {
+    int cedula;
+    char nombre[50];
+    float promedio;
+};
+
+// Realiza la partición basada en rupturas de secuencia (tramos naturales)
+void particionNatural(const std::string& orig, const std::string& f1, const std::string& f2) {
+    std::ifstream archivoOrig(orig, std::ios::binary);
+    std::ofstream archivoF1(f1, std::ios::binary);
+    std::ofstream archivoF2(f2, std::ios::binary);
+
+    EstudianteUNET estActual, estAnterior;
+    bool escribirEnF1 = true;
+
+    if (!archivoOrig.read(reinterpret_cast<char*>(&estActual), sizeof(EstudianteUNET))) return;
+    
+    // Escribe el primer registro
+    archivoF1.write(reinterpret_cast<char*>(&estActual), sizeof(EstudianteUNET));
+    estAnterior = estActual;
+
+    while (archivoOrig.read(reinterpret_cast<char*>(&estActual), sizeof(EstudianteUNET))) {
+        // Si la clave actual es menor que la anterior, se rompió la secuencia natural
+        if (estActual.cedula < estAnterior.cedula) {
+            escribirEnF1 = !escribirEnF1; // Cambia de archivo auxiliar
+        }
+
+        if (escribirEnF1) {
+            archivoF1.write(reinterpret_cast<char*>(&estActual), sizeof(EstudianteUNET));
+        } else {
+            archivoF2.write(reinterpret_cast<char*>(&estActual), sizeof(EstudianteUNET));
+        }
+        estAnterior = estActual;
+    }
+}
+
+// Fusiona los tramos variables respetando el orden natural de cada archivo temporal
+int fusionNatural(const std::string& orig, const std::string& f1, const std::string& f2) {
+    std::ofstream archivoOrig(orig, std::ios::binary);
+    std::ifstream archivoF1(f1, std::ios::binary);
+    std::ifstream archivoF2(f2, std::ios::binary);
+
+    EstudianteUNET est1, est2, estAnterior;
+    bool hayF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+    bool hayF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+    int cantidadTramosFusiinados = 0;
+
+    while (hayF1 && hayF2) {
+        cantidadTramosFusiinados++;
+        bool finTramoF1 = false, finTramoF2 = false;
+
+        while (!finTramoF1 && !finTramoF2) {
+            if (est1.cedula <= est2.cedula) {
+                archivoOrig.write(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+                estAnterior = est1;
+                hayF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+                // Verifica fin de tramo si el siguiente registro leído es menor (ruptura)
+                if (!hayF1 || est1.cedula < estAnterior.cedula) finTramoF1 = true;
+            } else {
+                archivoOrig.write(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+                estAnterior = est2;
+                hayF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+                if (!hayF2 || est2.cedula < estAnterior.cedula) finTramoF2 = true;
+            }
+        }
+
+        // Copiar el resto del tramo que quedó colgado de F1
+        while (!finTramoF1) {
+            archivoOrig.write(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+            estAnterior = est1;
+            hayF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+            if (!hayF1 || est1.cedula < estAnterior.cedula) finTramoF1 = true;
+        }
+
+        // Copiar el resto del tramo que quedó colgado de F2
+        while (!finTramoF2) {
+            archivoOrig.write(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+            estAnterior = est2;
+            hayF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+            if (!hayF2 || est2.cedula < estAnterior.cedula) finTramoF2 = true;
+        }
+    }
+
+    // Si quedaron tramos sueltos en un solo archivo porque el otro se vació antes
+    while (hayF1) {
+        archivoOrig.write(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+        hayF1 = (bool)archivoF1.read(reinterpret_cast<char*>(&est1), sizeof(EstudianteUNET));
+    }
+    while (hayF2) {
+        archivoOrig.write(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+        hayF2 = (bool)archivoF2.read(reinterpret_cast<char*>(&est2), sizeof(EstudianteUNET));
+    }
+
+    return cantidadTramosFusiinados;
+}
+
+// Algoritmo principal de Mezcla Natural
+void ordenarMezclaNatural(const std::string& archivoOriginal) {
+    std::string f1 = "tempNatural1.dat";
+    std::string f2 = "tempNatural2.dat";
+    int numTramos = 0;
+
+    do {
+        particionNatural(archivoOriginal, f1, f2);
+        numTramos = fusionNatural(archivoOriginal, f1, f2);
+    } while (numTramos > 1); 
+}
+```
