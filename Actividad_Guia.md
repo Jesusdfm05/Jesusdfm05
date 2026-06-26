@@ -1,4 +1,6 @@
 # GUÍA TÉCNICA: ESTRUCTURAS DE DATOS
+***Jesus Florez V-31.762.806***
+***Jesus Rojas V-31.386.557***
 
 Esta guía técnica compila los fundamentos teóricos, mecanismos operativos y criterios de eficiencia computacional para la recuperación de información en entornos de software, estructurada bajo los requerimientos de la Universidad Nacional Experimental del Táchira (UNET).
 
