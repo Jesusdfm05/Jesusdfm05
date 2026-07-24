@@ -3,7 +3,9 @@
 =========================================
 
 [CLIENTE(S) MAS FRECUENTES] (Max Servicios: 1)
+- Deisy Morales (Cedula: 11111565)
 - Jesus Florez (Cedula: 31762806)
 
 [REPARTIDOR(ES) ESTRELLA] (Max Entregas: 1)
-- Freyzer Ramirez (Placa: 05)
+- Alberto Rico (Placa: 001)
+- David Morales (Placa: 002)

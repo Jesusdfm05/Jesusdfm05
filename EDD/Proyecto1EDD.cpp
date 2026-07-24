@@ -328,7 +328,6 @@ void guardarRepartidores() {
                 << listaRepartidores[i].Placa << "|"
                 << listaRepartidores[i].Sector << "|"
                 << listaRepartidores[i].Servicios << "|"
-                // Convertimos el bool a entero (1 o 0) para el archivo de texto
                 << (listaRepartidores[i].Disponible ? 1 : 0) << endl;
     }
     archivo.close();

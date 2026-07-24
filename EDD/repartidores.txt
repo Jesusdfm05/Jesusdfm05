@@ -1,2 +1,4 @@
-21|Freyzer Ramirez|Bera Leon|05|1|1|1
-22|Jaider Gomez|Bera SBR|15|1|0|1
+11105071|Alberto Rico|Aveo|001|1|1|1
+31762806|David Morales|Blazer|002|2|1|1
+28422644|Oriana Florez|Bera Socialista|003|3|0|1
+11111565|Beatriz Morales|Corola|004|3|0|1
