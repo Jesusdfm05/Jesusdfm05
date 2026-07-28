@@ -1,11 +1,9 @@
 =========================================
-   SPEEDDELIVERY - REPORTE DE JORNADA    
+    SPEEDDELIVERY - REPORTE DE JORNADA    
 =========================================
 
-[CLIENTE(S) MAS FRECUENTES] (Max Servicios: 1)
+[CLIENTE(S) MAS FRECUENTES] (Max Servicios: 5)
 - Deisy Morales (Cedula: 11111565)
-- Jesus Florez (Cedula: 31762806)
 
-[REPARTIDOR(ES) ESTRELLA] (Max Entregas: 1)
-- Alberto Rico (Placa: 001)
-- David Morales (Placa: 002)
+[REPARTIDOR(ES) ESTRELLA] (Max Entregas: 5)
+- Oriana Florez (Placa: 002)
