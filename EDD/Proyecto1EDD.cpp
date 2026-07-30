@@ -8,8 +8,6 @@
 #include <ctime>    
 using namespace std;
 
-// ==================== ESTRUCTURAS DE DATOS ====================
-
 struct Sector {
     int Id;
     char Direccion[20];
@@ -27,11 +25,11 @@ struct Repartidor {
     char Nombre[30];
     char Vehiculo[20];
     char Placa[10];
-    int Sector;          // Sector actual
-    int SectorDestino;   // Sector al que viaja si esta ocupado
-    char CedulaClienteAtendido[10]; // Cliente que lleva en el viaje actual
+    int Sector;          
+    int SectorDestino;   
+    char CedulaClienteAtendido[10]; 
     int Servicios;
-    bool Disponible;     // true = Disponible, false = En Viaje
+    bool Disponible;     
 };
 
 // Nodo y Cola Dinamica para la lista de espera de Clientes por Sector
@@ -46,8 +44,6 @@ struct ColaSector {
     NodoCola* final;
 };
 
-// ==================== CONSTANTES Y VARIABLES GLOBALES ====================
-
 const int MAX_CLIENTES = 50;
 const int MAX_REPARTIDORES = 50;
 const int MAX_SECTORES = 20;
@@ -61,10 +57,9 @@ Cliente arregloClientes[MAX_CLIENTES];
 Repartidor arregloRepartidores[MAX_REPARTIDORES];
 Sector listaSectores[MAX_SECTORES];
 
-// Colas de espera por sector
 ColaSector colasEspera[MAX_SECTORES];
 
-// ==================== MANEJO DE COLAS DINAMICAS ====================
+// MANEJO DE COLAS DINAMICAS 
 
 void inicializarColas() {
     for (int i = 0; i < MAX_SECTORES; i++) {
@@ -121,7 +116,7 @@ bool hayClientesEnEspera(int idSectorOrigen) {
     return colasEspera[idx].frente != NULL;
 }
 
-// ==================== PERSISTENCIA DE DATOS (ARCHIVOS) ====================
+// PERSISTENCIA DE DATOS (ARCHIVOS) 
 
 void cargarSectores() {
     ifstream archivo("sectores.txt");
@@ -259,7 +254,7 @@ void generarReporteEstadisticas() {
     archivo.close();
 }
 
-// ==================== GESTION DE CLIENTES ====================
+// GESTION DE CLIENTES 
 
 void anadirCliente() {
     if (contadorClientes >= MAX_CLIENTES) {
@@ -390,7 +385,7 @@ void menuClientes() {
     } while (opClientes != 5);
 }
 
-// ==================== GESTION DE REPARTIDORES ====================
+// GESTION DE REPARTIDORES
 
 void anadirRepartidor() {
     if (contadorRepartidores >= MAX_REPARTIDORES) {
@@ -537,7 +532,7 @@ void menuRepartidores() {
     } while (opRep != 5);
 }
 
-// ==================== GESTION DE SECTORES ====================
+// GESTION DE SECTORES
 
 void anadirSector() {
     if (contadorSectores >= MAX_SECTORES) {
@@ -646,7 +641,7 @@ void menuGestionInterna() {
     } while (op != 4);
 }
 
-// ==================== SERVICIO DIARIO ====================
+// SERVICIO DIARIO 
 
 void iniciarJornada() {
     if (contadorRepartidores == 0 || contadorSectores == 0) {
@@ -766,14 +761,12 @@ void verEstadoPedidosYEnEspera() {
     cout << "           ESTADO DE PEDIDOS Y ENVIOS EN SISTEMA         " << endl;
     cout << "=========================================================" << endl;
 
-    // 1. Mostrar Pedidos En Camino
     cout << "\n--- 1. ENVIOS EN CAMINO (EN VIAJE) ---" << endl;
     bool hayEnViaje = false;
     for (int i = 0; i < contadorRepartidores; i++) {
         if (!arregloRepartidores[i].Disponible) {
             hayEnViaje = true;
             cout << "- Repartidor: " << arregloRepartidores[i].Nombre 
-                 << " (Placa: " << arregloRepartidores[i].Placa << ")"
                  << " | Cliente C.I: " << arregloRepartidores[i].CedulaClienteAtendido
                  << " | Origen: Sector " << arregloRepartidores[i].Sector
                  << " -> Destino: Sector " << arregloRepartidores[i].SectorDestino << endl;
@@ -783,8 +776,7 @@ void verEstadoPedidosYEnEspera() {
         cout << "No hay repartidores en camino en este momento." << endl;
     }
 
-    // 2. Mostrar Pedidos En Cola de Espera (Por Sectores y Orden FIFO)
-    cout << "\n--- 2. PEDIDOS EN COLA DE ESPERA (POR SECTOR - ORDEN FIFO) ---" << endl;
+    cout << "\n--- 2. PEDIDOS EN COLA DE ESPERA (POR SECTOR) ---" << endl;
     bool hayColaGeneral = false;
     for (int i = 0; i < contadorSectores; i++) {
         int idSec = listaSectores[i].Id;
@@ -858,7 +850,6 @@ void actualizarUbicacionRepartidor() {
     cout << "Ubicacion actualizada. Repartidor " << arregloRepartidores[idxRepartidor].Nombre 
          << " movido al Sector " << nuevoSector << endl;
 
-    // Evaluacion e integracion automatica de la Cola de Espera
     if (hayClientesEnEspera(nuevoSector)) {
         char cedulaCliente[10];
         int sectorDestino;
@@ -986,7 +977,7 @@ void menuServicioDiario() {
     } while (opServicio != 6);
 }
 
-// ==================== MAIN ====================
+//  main
 
 int main() {
     inicializarColas();
