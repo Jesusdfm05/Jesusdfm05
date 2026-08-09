@@ -32,7 +32,6 @@ struct Repartidor {
     bool Disponible;     
 };
 
-// Nodo y Cola Dinamica para la lista de espera de Clientes por Sector
 struct NodoCola {
     char CedulaCliente[10];
     int SectorDestino;
