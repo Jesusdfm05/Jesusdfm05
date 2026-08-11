@@ -1,10 +1,8 @@
 #include <iostream>
 #include <string>
-#include <algorithm> // Para std::max
+#include <algorithm> 
 
 using namespace std;
-
-// ESTRUCTURA DEL NODO (REGISTRO ESTUDIANTIL)
 
 struct Nodo {
     int cedula;
@@ -15,7 +13,6 @@ struct Nodo {
     Nodo* izquierdo;
     Nodo* derecho;
 
-    // Constructor
     Nodo(int ced, string nom, string car) {
         cedula = ced;
         nombre = nom;

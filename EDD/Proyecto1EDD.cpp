@@ -1,12 +1,14 @@
-// San Cristobal, Julio de 2026
-// Jesus David Florez Morales V-31.762.806
-
 #include <iostream>
 #include <cstring>  
 #include <fstream>  
 #include <cstdlib>  
 #include <ctime>    
 using namespace std;
+
+const int INF = 999999;
+const int MAX_CLIENTES = 50;
+const int MAX_REPARTIDORES = 50;
+const int MAX_SECTORES = 20;
 
 struct Sector {
     int Id;
@@ -43,23 +45,42 @@ struct ColaSector {
     NodoCola* final;
 };
 
-const int MAX_CLIENTES = 50;
-const int MAX_REPARTIDORES = 50;
-const int MAX_SECTORES = 20;
-
+// VARIABLES GLOBALES
 int contadorClientes = 0;
 int contadorRepartidores = 0;
 int contadorSectores = 0;
-int opcionPrincipal;
 
 Cliente arregloClientes[MAX_CLIENTES];
 Repartidor arregloRepartidores[MAX_REPARTIDORES];
 Sector listaSectores[MAX_SECTORES];
-
 ColaSector colasEspera[MAX_SECTORES];
 
-// MANEJO DE COLAS DINAMICAS 
+// GRAFO: MATRIZ CUADRADA DINÁMICA DE ADYACENCIA
+int** matrizGrafo = NULL;
 
+// --- MANEJO DE MEMORIA DEL GRAFO ---
+void inicializarMatrizGrafo() {
+    matrizGrafo = new int*[MAX_SECTORES];
+    for (int i = 0; i < MAX_SECTORES; i++) {
+        matrizGrafo[i] = new int[MAX_SECTORES];
+        for (int j = 0; j < MAX_SECTORES; j++) {
+            if (i == j) matrizGrafo[i][j] = 0;
+            else matrizGrafo[i][j] = INF;
+        }
+    }
+}
+
+void liberarMatrizGrafo() {
+    if (matrizGrafo != NULL) {
+        for (int i = 0; i < MAX_SECTORES; i++) {
+            delete[] matrizGrafo[i];
+        }
+        delete[] matrizGrafo;
+        matrizGrafo = NULL;
+    }
+}
+
+// --- MANEJO DE COLAS DINAMICAS ---
 void inicializarColas() {
     for (int i = 0; i < MAX_SECTORES; i++) {
         colasEspera[i].frente = NULL;
@@ -115,8 +136,7 @@ bool hayClientesEnEspera(int idSectorOrigen) {
     return colasEspera[idx].frente != NULL;
 }
 
-// PERSISTENCIA DE DATOS (ARCHIVOS) 
-
+// --- PERSISTENCIA DE DATOS Y CARGA DE GRAFO ---
 void cargarSectores() {
     ifstream archivo("sectores.txt");
     if (!archivo.is_open()) return; 
@@ -128,6 +148,30 @@ void cargarSectores() {
         listaSectores[contadorSectores].Id = atoi(idStr);
         archivo.getline(listaSectores[contadorSectores].Direccion, 20); 
         contadorSectores++;
+    }
+    archivo.close();
+}
+
+void cargarGrafo() {
+    ifstream archivo("Grafo.txt");
+    if (!archivo.is_open()) return;
+
+    char origenStr[10], destinoStr[10], distStr[10];
+    while (archivo.getline(origenStr, 10, ',')) {
+        archivo.getline(destinoStr, 10, ',');
+        archivo.getline(distStr, 10);
+
+        int idOrigen = atoi(origenStr);
+        int idDestino = atoi(destinoStr);
+        int distancia = atoi(distStr);
+
+        int idxO = obtenerIndiceSectorPorId(idOrigen);
+        int idxD = obtenerIndiceSectorPorId(idDestino);
+
+        if (idxO != -1 && idxD != -1) {
+            matrizGrafo[idxO][idxD] = distancia;
+            matrizGrafo[idxD][idxO] = distancia; // Grafo No Dirigido
+        }
     }
     archivo.close();
 }
@@ -180,10 +224,8 @@ void cargarRepartidores() {
 void guardarSectores() {
     ofstream archivo("sectores.txt");
     if (!archivo.is_open()) return;
-    
     for (int i = 0; i < contadorSectores; i++) {
-        archivo << listaSectores[i].Id << "|"
-                << listaSectores[i].Direccion << endl;
+        archivo << listaSectores[i].Id << "|" << listaSectores[i].Direccion << endl;
     }
     archivo.close();
 }
@@ -191,7 +233,6 @@ void guardarSectores() {
 void guardarClientes() {
     ofstream archivo("clientes.txt");
     if (!archivo.is_open()) return;
-    
     for (int i = 0; i < contadorClientes; i++) {
         archivo << arregloClientes[i].Cedula << "|"
                 << arregloClientes[i].Telefono << "|"
@@ -204,7 +245,6 @@ void guardarClientes() {
 void guardarRepartidores() {
     ofstream archivo("repartidores.txt");
     if (!archivo.is_open()) return;
-    
     for (int i = 0; i < contadorRepartidores; i++) {
         archivo << arregloRepartidores[i].Cedula << "|"
                 << arregloRepartidores[i].Nombre << "|"
@@ -217,451 +257,325 @@ void guardarRepartidores() {
     archivo.close();
 }
 
-void generarReporteEstadisticas() {
-    ofstream archivo("reporte_estadisticas.txt");
-    if (!archivo.is_open()) return;
-
-    archivo << "=========================================" << endl;
-    archivo << "    SPEEDDELIVERY - REPORTE DE JORNADA    " << endl;
-    archivo << "=========================================" << endl;
-
-    int maxServiciosCliente = -1;
-    for(int i = 0; i < contadorClientes; i++) {
-        if(arregloClientes[i].Servicios > maxServiciosCliente) {
-            maxServiciosCliente = arregloClientes[i].Servicios;
-        }
-    }
-    archivo << "\n[CLIENTE(S) MAS FRECUENTES] (Max Servicios: " << maxServiciosCliente << ")" << endl;
-    for(int i = 0; i < contadorClientes; i++) {
-        if(arregloClientes[i].Servicios == maxServiciosCliente && maxServiciosCliente > 0) {
-            archivo << "- " << arregloClientes[i].Nombre << " (Cedula: " << arregloClientes[i].Cedula << ")" << endl;
-        }
+// --- ALGORITMO DE DIJKSTRA (RUTA MÍNIMA EN EL GRAFO) ---
+int obtenerDistanciaYRuta(int idxOrigen, int idxDestino, int rutaOut[], int &tamRuta) {
+    if (idxOrigen == idxDestino) {
+        rutaOut[0] = listaSectores[idxOrigen].Id;
+        tamRuta = 1;
+        return 0;
     }
 
-    int maxServiciosRep = -1;
-    for(int i = 0; i < contadorRepartidores; i++) {
-        if(arregloRepartidores[i].Servicios > maxServiciosRep) {
-            maxServiciosRep = arregloRepartidores[i].Servicios;
+    int dist[MAX_SECTORES];
+    bool visitado[MAX_SECTORES];
+    int previo[MAX_SECTORES];
+
+    for (int i = 0; i < contadorSectores; i++) {
+        dist[i] = INF;
+        visitado[i] = false;
+        previo[i] = -1;
+    }
+
+    dist[idxOrigen] = 0;
+
+    for (int i = 0; i < contadorSectores - 1; i++) {
+        int minDist = INF, u = -1;
+        for (int j = 0; j < contadorSectores; j++) {
+            if (!visitado[j] && dist[j] < minDist) {
+                minDist = dist[j];
+                u = j;
+            }
+        }
+
+        if (u == -1) break;
+        visitado[u] = true;
+
+        for (int v = 0; v < contadorSectores; v++) {
+            if (!visitado[v] && matrizGrafo[u][v] != INF && dist[u] + matrizGrafo[u][v] < dist[v]) {
+                dist[v] = dist[u] + matrizGrafo[u][v];
+                previo[v] = u;
+            }
         }
     }
-    archivo << "\n[REPARTIDOR(ES) ESTRELLA] (Max Entregas: " << maxServiciosRep << ")" << endl;
-    for(int i = 0; i < contadorRepartidores; i++) {
-        if(arregloRepartidores[i].Servicios == maxServiciosRep && maxServiciosRep > 0) {
-            archivo << "- " << arregloRepartidores[i].Nombre << " (Placa: " << arregloRepartidores[i].Placa << ")" << endl;
-        }
+
+    if (dist[idxDestino] == INF) {
+        tamRuta = 0;
+        return INF;
     }
-    archivo.close();
+
+    int caminoTemp[MAX_SECTORES];
+    int contCamino = 0;
+    int curr = idxDestino;
+
+    while (curr != -1) {
+        caminoTemp[contCamino++] = listaSectores[curr].Id;
+        curr = previo[curr];
+    }
+
+    tamRuta = 0;
+    for (int i = contCamino - 1; i >= 0; i--) {
+        rutaOut[tamRuta++] = caminoTemp[i];
+    }
+
+    return dist[idxDestino];
 }
 
-// GESTION DE CLIENTES 
-
+// --- GESTIÓN DE CLIENTES ---
 void anadirCliente() {
     if (contadorClientes >= MAX_CLIENTES) {
-        cout << "\nYa no caben mas clientes!" << endl;
-        cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
+        cout << "\n[!] Almacenamiento de clientes lleno." << endl;
         return;
     }
-    
     char tempCedula[10];
     cin.ignore(); 
-    cout << "---Cedula del cliente---" << endl;
+    cout << "Ingrese Cedula del cliente: ";
+    cin.getline(tempCedula, 10);
+    
+    for (int i = 0; i < contadorClientes; i++) {
+        if (strcmp(arregloClientes[i].Cedula, tempCedula) == 0) {
+            cout << "\n[!] El cliente ya existe." << endl;
+            return;
+        }
+    }
+    strcpy(arregloClientes[contadorClientes].Cedula, tempCedula);
+    cout << "Ingrese Nombre del cliente: ";
+    cin.getline(arregloClientes[contadorClientes].Nombre, 30);
+    cout << "Ingrese Telefono del cliente: ";
+    cin.getline(arregloClientes[contadorClientes].Telefono, 15); 
+    arregloClientes[contadorClientes].Servicios = 0;
+    contadorClientes++;
+    cout << "\nCliente registrado exitosamente." << endl;
+}
+
+void modificarCliente() {
+    char tempCedula[10];
+    cin.ignore();
+    cout << "Ingrese la Cedula del cliente a modificar: ";
     cin.getline(tempCedula, 10);
 
     for (int i = 0; i < contadorClientes; i++) {
         if (strcmp(arregloClientes[i].Cedula, tempCedula) == 0) {
-            cout << "\n[!] Error: Ya existe un cliente registrado con esa cedula." << endl;
-            cout << "Presione Enter para continuar..."; cin.get();
+            cout << "Ingrese Nuevo Nombre: ";
+            cin.getline(arregloClientes[i].Nombre, 30);
+            cout << "Ingrese Nuevo Telefono: ";
+            cin.getline(arregloClientes[i].Telefono, 15);
+            cout << "\nCliente modificado con exito." << endl;
             return;
         }
     }
+    cout << "\n[!] Cliente no encontrado." << endl;
+}
 
-    strcpy(arregloClientes[contadorClientes].Cedula, tempCedula);
-    cout << "---Nombre del cliente---" << endl;
-    cin.getline(arregloClientes[contadorClientes].Nombre, 30);
-    cout << "---N. telefono del cliente---" << endl;
-    cin.getline(arregloClientes[contadorClientes].Telefono, 15); 
-    
-    arregloClientes[contadorClientes].Servicios = 0;
-    contadorClientes++;
-    cout << "\nCliente registrado con exito!" << endl;
-    cout << "Presione Enter para continuar..."; cin.get();
+void eliminarCliente() {
+    char tempCedula[10];
+    cin.ignore();
+    cout << "Ingrese la Cedula del cliente a eliminar: ";
+    cin.getline(tempCedula, 10);
+
+    for (int i = 0; i < contadorClientes; i++) {
+        if (strcmp(arregloClientes[i].Cedula, tempCedula) == 0) {
+            for (int j = i; j < contadorClientes - 1; j++) {
+                arregloClientes[j] = arregloClientes[j + 1];
+            }
+            contadorClientes--;
+            cout << "\nCliente eliminado correctamente." << endl;
+            return;
+        }
+    }
+    cout << "\n[!] Cliente no encontrado." << endl;
 }
 
 void listaClientes() {
-    cout << "\n--- LISTA DE CLIENTES ---" << endl;
+    cout << "\n--- LISTA DE CLIENTES REGISTRADOS ---" << endl;
     if (contadorClientes == 0) {
-        cout << "No hay clientes registrados en el sistema." << endl;
-    } else {
-        for (int i = 0; i < contadorClientes; i++) {
-            cout << i + 1 << ". Nombre: " << arregloClientes[i].Nombre 
-                 << " | C.I: " << arregloClientes[i].Cedula
-                 << " | Telefono: " << arregloClientes[i].Telefono 
-                 << " | Servicios Realizados: " << arregloClientes[i].Servicios << endl;
-        }
+        cout << "No hay clientes registrados." << endl;
+    }
+    for (int i = 0; i < contadorClientes; i++) {
+        cout << i + 1 << ". Nombre: " << arregloClientes[i].Nombre 
+             << " | C.I: " << arregloClientes[i].Cedula 
+             << " | Tel: " << arregloClientes[i].Telefono 
+             << " | Servicios: " << arregloClientes[i].Servicios << endl;
     }
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
 
-void modificarCliente() {
-    char cedulaBuscar[10];
-    bool encontrado = false;
-    
-    cout << "--- Ingrese la Cedula del Cliente a Modificar ---" << endl;
-    cin.ignore();
-    cin.getline(cedulaBuscar, 10);
-    
-    for(int i = 0; i < contadorClientes; i++) {
-        if(strcmp(arregloClientes[i].Cedula, cedulaBuscar) == 0) {
-            cout << "\n--- MODIFICANDO DATOS ---" << endl;
-            cout << "Nombre Actual (" << arregloClientes[i].Nombre << "): ";
-            cin.getline(arregloClientes[i].Nombre, 30);
-            cout << "Telefono Actual (" << arregloClientes[i].Telefono << "): ";
-            cin.getline(arregloClientes[i].Telefono, 15);
-            
-            cout << "\nCliente modificado con exito!" << endl;
-            encontrado = true;
-            break;
-        }
-    }
-    if(!encontrado) cout << "\nCliente no registrado en el sistema." << endl;
-    cout << "\nPresione Enter para continuar..."; cin.get();
-}
-
-void eliminarCliente() {
-    if (contadorClientes == 0) { 
-        cout << "\nNo hay clientes registrados en el sistema." << endl;
-        cout << "Presione Enter..."; cin.ignore(); cin.get();
-        return;
-    }
-
-    char cedulaBuscar[10];
-    int indiceEliminar = -1;
-
-    cout << "--- Ingrese la Cedula del Cliente a Eliminar ---" << endl;
-    cin.ignore();
-    cin.getline(cedulaBuscar, 10);
-
-    for (int i = 0; i < contadorClientes; i++) {
-        if (strcmp(arregloClientes[i].Cedula, cedulaBuscar) == 0) {
-            indiceEliminar = i;
-            break;
-        }
-    }
-
-    if (indiceEliminar != -1) {
-        for (int i = indiceEliminar; i < contadorClientes - 1; i++) {
-            arregloClientes[i] = arregloClientes[i + 1];
-        }
-        contadorClientes--;
-        cout << "\nCliente eliminado de forma exitosa." << endl;
-    } else {
-        cout << "\nError: Cedula no encontrada." << endl;
-    }
-    cout << "Presione Enter para continuar..."; cin.get();
-}
-
 void menuClientes() {
-    int opClientes;
+    int op;
     do {
-        cout << "\033[2J\033[1;1H";
-        cout << "----- MENU CLIENTES -----" << endl;
-        cout << "1. Anadir cliente" << endl;
-        cout << "2. Lista de clientes" << endl;
-        cout << "3. Modificar cliente" << endl;
-        cout << "4. Eliminar cliente" << endl;
-        cout << "5. Volver al menu anterior" << endl; 
-        cout << "Seleccione una opcion: ";
-        cin >> opClientes;
-
-        switch (opClientes) {
-            case 1: anadirCliente(); break;
-            case 2: listaClientes(); break;
-            case 3: modificarCliente(); break;
-            case 4: eliminarCliente(); break; 
-            case 5: break;
-            default: break;
-        }
-    } while (opClientes != 5);
+        cout << "\n--- GESTION DE CLIENTES ---" << endl;
+        cout << "1. Anadir cliente\n2. Modificar cliente\n3. Eliminar cliente\n4. Lista de clientes\n5. Volver\nOpcion: ";
+        cin >> op;
+        if (op == 1) anadirCliente();
+        else if (op == 2) modificarCliente();
+        else if (op == 3) eliminarCliente();
+        else if (op == 4) listaClientes();
+    } while (op != 5);
 }
 
-// GESTION DE REPARTIDORES
-
+// --- GESTIÓN DE REPARTIDORES ---
 void anadirRepartidor() {
     if (contadorRepartidores >= MAX_REPARTIDORES) {
-        cout << "\nCapacidad de repartidores al maximo!" << endl;
-        cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
+        cout << "\n[!] Limite de repartidores alcanzado." << endl;
         return;
     }
-    
     char tempCedula[10];
     cin.ignore();
-    cout << "---Cedula del Repartidor---" << endl;
+    cout << "Ingrese Cedula del Repartidor: ";
     cin.getline(tempCedula, 10);
 
     for (int i = 0; i < contadorRepartidores; i++) {
         if (strcmp(arregloRepartidores[i].Cedula, tempCedula) == 0) {
-            cout << "\n[!] Error: Ya existe un repartidor con esa cedula." << endl;
-            cout << "Presione Enter para continuar..."; cin.get();
+            cout << "\n[!] El repartidor ya existe." << endl;
             return;
         }
     }
 
     strcpy(arregloRepartidores[contadorRepartidores].Cedula, tempCedula);
-    cout << "---Nombre del Repartidor---" << endl;
+    cout << "Ingrese Nombre: ";
     cin.getline(arregloRepartidores[contadorRepartidores].Nombre, 30);
-    cout << "---Vehiculo---" << endl;
+    cout << "Ingrese Tipo de Vehiculo: ";
     cin.getline(arregloRepartidores[contadorRepartidores].Vehiculo, 20);
-    cout << "---Placa---" << endl;
+    cout << "Ingrese Placa del Vehiculo: ";
     cin.getline(arregloRepartidores[contadorRepartidores].Placa, 10);
-    cout << "---ID del Sector Asignado (Numero)---" << endl;
+    cout << "Ingrese ID del Sector Inicial: ";
     cin >> arregloRepartidores[contadorRepartidores].Sector;
-    
+
     arregloRepartidores[contadorRepartidores].Servicios = 0;
     arregloRepartidores[contadorRepartidores].Disponible = true;
     arregloRepartidores[contadorRepartidores].SectorDestino = -1;
     strcpy(arregloRepartidores[contadorRepartidores].CedulaClienteAtendido, "");
 
     contadorRepartidores++;
-    cout << "\nRepartidor registrado con exito!" << endl;
-    cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
+    cout << "\nRepartidor registrado con exito." << endl;
+}
+
+void modificarRepartidor() {
+    char tempCedula[10];
+    cin.ignore();
+    cout << "Ingrese Cedula del repartidor a modificar: ";
+    cin.getline(tempCedula, 10);
+
+    for (int i = 0; i < contadorRepartidores; i++) {
+        if (strcmp(arregloRepartidores[i].Cedula, tempCedula) == 0) {
+            cout << "Ingrese Nuevo Nombre: ";
+            cin.getline(arregloRepartidores[i].Nombre, 30);
+            cout << "Ingrese Nuevo Vehiculo: ";
+            cin.getline(arregloRepartidores[i].Vehiculo, 20);
+            cout << "Ingrese Nueva Placa: ";
+            cin.getline(arregloRepartidores[i].Placa, 10);
+            cout << "Ingrese Nuevo Sector: ";
+            cin >> arregloRepartidores[i].Sector;
+            cout << "\nRepartidor actualizado correctamente." << endl;
+            return;
+        }
+    }
+    cout << "\n[!] Repartidor no encontrado." << endl;
+}
+
+void eliminarRepartidor() {
+    char tempCedula[10];
+    cin.ignore();
+    cout << "Ingrese Cedula del repartidor a eliminar: ";
+    cin.getline(tempCedula, 10);
+
+    for (int i = 0; i < contadorRepartidores; i++) {
+        if (strcmp(arregloRepartidores[i].Cedula, tempCedula) == 0) {
+            for (int j = i; j < contadorRepartidores - 1; j++) {
+                arregloRepartidores[j] = arregloRepartidores[j + 1];
+            }
+            contadorRepartidores--;
+            cout << "\nRepartidor eliminado con exito." << endl;
+            return;
+        }
+    }
+    cout << "\n[!] Repartidor no encontrado." << endl;
 }
 
 void listaRepartidores() {
     cout << "\n--- LISTA DE REPARTIDORES ---" << endl;
     if (contadorRepartidores == 0) {
-        cout << "No hay repartidores registrados en el sistema." << endl;
-    } else {
-        for (int i = 0; i < contadorRepartidores; i++) {
-            cout << i + 1 << ". Nombre: " << arregloRepartidores[i].Nombre 
-                 << " | Placa: " << arregloRepartidores[i].Placa 
-                 << " | Sector Actual: " << arregloRepartidores[i].Sector
-                 << " | Estado: ";
-            if (arregloRepartidores[i].Disponible) {
-                cout << "[DISPONIBLE]";
-            } else {
-                cout << "[EN VIAJE -> Sector " << arregloRepartidores[i].SectorDestino << "]";
-            }
-            cout << " | Entregas Totales: " << arregloRepartidores[i].Servicios << endl;
-        }
+        cout << "No hay repartidores registrados." << endl;
+    }
+    for (int i = 0; i < contadorRepartidores; i++) {
+        cout << i + 1 << ". " << arregloRepartidores[i].Nombre 
+             << " | C.I: " << arregloRepartidores[i].Cedula
+             << " | Vehiculo: " << arregloRepartidores[i].Vehiculo
+             << " | Placa: " << arregloRepartidores[i].Placa
+             << " | Sector Ubicacion: " << arregloRepartidores[i].Sector
+             << " | Estado: " << (arregloRepartidores[i].Disponible ? "Disponible" : "En Viaje")
+             << " | Servicios: " << arregloRepartidores[i].Servicios << endl;
     }
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
-}
-
-void modificarRepartidor() {
-    char cedulaBuscar[10];
-    bool encontrado = false;
-    
-    cout << "--- Ingrese la Cedula del Repartidor a Modificar ---" << endl;
-    cin.ignore();
-    cin.getline(cedulaBuscar, 10);
-    
-    for(int i = 0; i < contadorRepartidores; i++) {
-        if(strcmp(arregloRepartidores[i].Cedula, cedulaBuscar) == 0) {
-            cout << "\n--- MODIFICANDO DATOS ---" << endl;
-            cout << "Nombre Actual (" << arregloRepartidores[i].Nombre << "): ";
-            cin.getline(arregloRepartidores[i].Nombre, 30);
-            cout << "Vehiculo Actual (" << arregloRepartidores[i].Vehiculo << "): ";
-            cin.getline(arregloRepartidores[i].Vehiculo, 20);
-            cout << "Placa Actual (" << arregloRepartidores[i].Placa << "): ";
-            cin.getline(arregloRepartidores[i].Placa, 10);
-            
-            cout << "\nRepartidor modificado con exito!" << endl;
-            encontrado = true;
-            break;
-        }
-    }
-    if(!encontrado) cout << "\nRepartidor no encontrado." << endl;
-    cout << "\nPresione Enter para continuar..."; cin.get();
-}
-
-void eliminarRepartidor() {
-    if (contadorRepartidores == 0) { 
-        cout << "\nNo hay repartidores registrados." << endl;
-        cout << "Presione Enter..."; cin.ignore(); cin.get();
-        return;
-    }
-
-    char cedulaBuscar[10];
-    int indiceEliminar = -1;
-
-    cout << "--- Ingrese la Cedula del repartidor a Eliminar ---" << endl;
-    cin.ignore();
-    cin.getline(cedulaBuscar, 10);
-
-    for (int i = 0; i < contadorRepartidores; i++) {
-        if (strcmp(arregloRepartidores[i].Cedula, cedulaBuscar) == 0) {
-            indiceEliminar = i;
-            break;
-        }
-    }
-
-    if (indiceEliminar != -1) {
-        for (int i = indiceEliminar; i < contadorRepartidores - 1; i++) {
-            arregloRepartidores[i] = arregloRepartidores[i + 1];
-        }
-        contadorRepartidores--;
-        cout << "\nRepartidor eliminado con exito." << endl;
-    } else {
-        cout << "\nError: Cedula no encontrada." << endl;
-    }
-    cout << "Presione Enter para continuar..."; cin.get();
 }
 
 void menuRepartidores() {
-    int opRep;
+    int op;
     do {
-        cout << "\033[2J\033[1;1H";
-        cout << "----- MENU REPARTIDORES -----" << endl;
-        cout << "1. Anadir repartidor" << endl;
-        cout << "2. Lista de repartidores" << endl;
-        cout << "3. Modificar repartidor" << endl;
-        cout << "4. Eliminar repartidor" << endl;
-        cout << "5. Volver al menu anterior" << endl; 
-        cout << "Seleccione una opcion: ";
-        cin >> opRep;
-
-        switch (opRep) {
-            case 1: anadirRepartidor(); break;
-            case 2: listaRepartidores(); break; 
-            case 3: modificarRepartidor(); break;
-            case 4: eliminarRepartidor(); break; 
-            case 5: break;
-            default: break;
-        }
-    } while (opRep != 5);
+        cout << "\n--- GESTION DE REPARTIDORES ---" << endl;
+        cout << "1. Anadir repartidor\n2. Modificar repartidor\n3. Eliminar repartidor\n4. Lista de repartidores\n5. Volver\nOpcion: ";
+        cin >> op;
+        if (op == 1) anadirRepartidor();
+        else if (op == 2) modificarRepartidor();
+        else if (op == 3) eliminarRepartidor();
+        else if (op == 4) listaRepartidores();
+    } while (op != 5);
 }
 
-// GESTION DE SECTORES
-
+// --- GESTIÓN DE SECTORES ---
 void anadirSector() {
     if (contadorSectores >= MAX_SECTORES) {
-        cout << "\nLimite de sectores alcanzado!" << endl;
-        cout << "Presione Enter..."; cin.ignore(); cin.get();
+        cout << "\n[!] Límite de sectores alcanzado." << endl;
         return;
     }
-    
-    int tempId;
-    cout << "--- ID del Sector (Numero) ---" << endl;
-    cin >> tempId;
+    int idTemp;
+    cout << "Ingrese ID del Sector: ";
+    cin >> idTemp;
 
-    for(int i = 0; i < contadorSectores; i++) {
-        if(listaSectores[i].Id == tempId) {
-            cout << "\n[!] Error: Ya existe un sector registrado con ese ID." << endl;
-            cout << "Presione Enter..."; cin.ignore(); cin.get();
-            return;
-        }
+    if (obtenerIndiceSectorPorId(idTemp) != -1) {
+        cout << "\n[!] El Sector ya existe." << endl;
+        return;
     }
-    
-    listaSectores[contadorSectores].Id = tempId;
+
+    listaSectores[contadorSectores].Id = idTemp;
     cin.ignore();
-    cout << "--- Direccion/Nombre del Sector ---" << endl;
+    cout << "Ingrese Nombre/Direccion del Sector: ";
     cin.getline(listaSectores[contadorSectores].Direccion, 20);
-    
+
     contadorSectores++;
-    cout << "\nSector registrado con exito!" << endl;
-    cout << "Presione Enter..."; cin.get();
+    cout << "\nSector agregado con exito." << endl;
 }
 
-void consultarSectores() {
-    cout << "\n--- SECTORES REGISTRADOS ---" << endl;
-    if(contadorSectores == 0) {
-        cout << "No hay sectores cargados en el sistema." << endl;
-    } else {
-        for(int i = 0; i < contadorSectores; i++) {
-            cout << "ID: " << listaSectores[i].Id << " | Direccion: " << listaSectores[i].Direccion << endl;
-        }
+void listaSectoresMenu() {
+    cout << "\n--- LISTA DE SECTORES ---" << endl;
+    for (int i = 0; i < contadorSectores; i++) {
+        cout << "ID: " << listaSectores[i].Id 
+             << " | Direccion: " << listaSectores[i].Direccion << endl;
     }
-    cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
-}
-
-void modificarSector() {
-    int idBuscar;
-    bool encontrado = false;
-    
-    cout << "--- Ingrese el ID del Sector a Modificar ---" << endl;
-    cin >> idBuscar;
-    
-    for(int i = 0; i < contadorSectores; i++) {
-        if(listaSectores[i].Id == idBuscar) {
-            cin.ignore();
-            cout << "Direccion Actual (" << listaSectores[i].Direccion << "): ";
-            cin.getline(listaSectores[i].Direccion, 20);
-            
-            cout << "\nSector modificado con exito!" << endl;
-            encontrado = true;
-            break;
-        }
-    }
-    if(!encontrado) cout << "\nSector no registrado." << endl;
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
 
 void menuSectores() {
-    int opSec;
+    int op;
     do {
-        cout << "\033[2J\033[1;1H";
-        cout << "----- MENU SECTORES -----" << endl;
-        cout << "1. Anadir sector" << endl;
-        cout << "2. Ver todos los sectores" << endl;
-        cout << "3. Modificar sector" << endl;
-        cout << "4. Volver al menu anterior" << endl; 
-        cout << "Seleccione una opcion: ";
-        cin >> opSec;
-
-        switch (opSec) {
-            case 1: anadirSector(); break;
-            case 2: consultarSectores(); break; 
-            case 3: modificarSector(); break;
-            case 4: break;
-            default: break;
-        }
-    } while (opSec != 4);
+        cout << "\n--- GESTION DE SECTORES ---" << endl;
+        cout << "1. Anadir sector\n2. Lista de sectores\n3. Volver\nOpcion: ";
+        cin >> op;
+        if (op == 1) anadirSector();
+        else if (op == 2) listaSectoresMenu();
+    } while (op != 3);
 }
 
 void menuGestionInterna() {
     int op;
     do {
-        cout << "\033[2J\033[1;1H";
-        cout << "----- GESTION INTERNA -----" << endl;
-        cout << "1. Clientes" << endl;
-        cout << "2. Repartidores" << endl;
-        cout << "3. Sectores" << endl;
-        cout << "4. Volver al Menu Principal" << endl;
-        cout << "Seleccione una opcion: ";
+        cout << "\n--- GESTION INTERNA ---\n1. Clientes\n2. Repartidores\n3. Sectores\n4. Volver\nOpcion: ";
         cin >> op;
-
-        switch (op) {
-            case 1: menuClientes(); break;
-            case 2: menuRepartidores(); break;
-            case 3: menuSectores(); break;  
-            case 4: break;
-            default: break;
-        }
+        if (op == 1) menuClientes();
+        else if (op == 2) menuRepartidores();
+        else if (op == 3) menuSectores();
     } while (op != 4);
 }
 
-// SERVICIO DIARIO 
-
-void iniciarJornada() {
-    if (contadorRepartidores == 0 || contadorSectores == 0) {
-        cout << "\nError: No se puede iniciar jornada sin datos cargados." << endl;
-        cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
-        return;
-    }
-    srand(time(NULL));
-
-    for (int i = 0; i < contadorRepartidores; i++) {
-        int indiceAleatorio = rand() % contadorSectores;
-        arregloRepartidores[i].Sector = listaSectores[indiceAleatorio].Id;
-        arregloRepartidores[i].Disponible = true; 
-        arregloRepartidores[i].SectorDestino = -1;
-        strcpy(arregloRepartidores[i].CedulaClienteAtendido, "");
-    }
-
-    cout << "\nJornada Iniciada. Motorizados distribuidos por la ciudad." << endl;
-    cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
-}
-
+// --- SERVICIO DIARIO CON RUTA MÍNIMA ---
 void solicitarEnvio() {
     if (contadorClientes == 0 || contadorRepartidores == 0) {
         cout << "\nSe requieren clientes y repartidores registrados." << endl;
@@ -673,7 +587,7 @@ void solicitarEnvio() {
     int sectorOrigen, sectorDestino;
     bool clienteExiste = false;
 
-    cout << "--- SOLICITAR SERVICIO DE DELIVERY ---" << endl;
+    cout << "\n--- SOLICITAR SERVICIO DE DELIVERY ---" << endl;
     cin.ignore();
     cout << "Ingrese la Cedula del Cliente: ";
     cin.getline(cedulaCliente, 10);
@@ -696,12 +610,20 @@ void solicitarEnvio() {
     cout << "Ingrese ID del Sector Destino (Donde se entrega): ";
     cin >> sectorDestino;
 
-    // Buscar repartidores DISPONIBLES en el sector origen
+    int idxOrigen = obtenerIndiceSectorPorId(sectorOrigen);
+    int idxDestino = obtenerIndiceSectorPorId(sectorDestino);
+
+    if (idxOrigen == -1 || idxDestino == -1) {
+        cout << "\n[!] Error: Sectores invalidos o no registrados." << endl;
+        cout << "Presione Enter..."; cin.ignore(); cin.get();
+        return;
+    }
+
     int indicesDisponibles[MAX_REPARTIDORES];
     int contDisponibles = 0;
 
     for (int i = 0; i < contadorRepartidores; i++) {
-        if (arregloRepartidores[i].Sector == sectorOrigen && arregloRepartidores[i].Disponible) {
+        if (arregloRepartidores[i].Disponible) {
             indicesDisponibles[contDisponibles] = i;
             contDisponibles++;
         }
@@ -709,27 +631,37 @@ void solicitarEnvio() {
 
     if (contDisponibles == 0) {
         cout << "\n========================================================" << endl;
-        cout << "[SIN REPARTIDORES DISPONIBLES EN EL SECTOR " << sectorOrigen << "]" << endl;
-        cout << "Su pedido ha sido registrado con exito en la COLA DE ESPERA." << endl;
-        cout << "Saldra automaticamente cuando un motorizado este libre." << endl;
+        cout << "[SIN REPARTIDORES DISPONIBLES EN EL SISTEMA]" << endl;
+        cout << "Su pedido ha sido registrado en la COLA DE ESPERA." << endl;
         cout << "========================================================" << endl;
-        
         encolarCliente(sectorOrigen, cedulaCliente, sectorDestino);
-
         cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
         return;
     }
 
-    cout << "\n--- REPARTIDORES DISPONIBLES EN EL SECTOR ---" << endl;
+    cout << "\n--- REPARTIDORES DISPONIBLES EN EL SISTEMA ---" << endl;
     for (int i = 0; i < contDisponibles; i++) {
-        int idx = indicesDisponibles[i];
-        cout << i + 1 << ". " << arregloRepartidores[idx].Nombre 
-             << " | Vehiculo: " << arregloRepartidores[idx].Vehiculo 
-             << " (Placa: " << arregloRepartidores[idx].Placa << ")" << endl;
+        int idxRep = indicesDisponibles[i];
+        int idxUbicacionRep = obtenerIndiceSectorPorId(arregloRepartidores[idxRep].Sector);
+
+        int rutaAux[MAX_SECTORES], tamAux = 0;
+        int d1 = obtenerDistanciaYRuta(idxUbicacionRep, idxOrigen, rutaAux, tamAux);
+        int d2 = obtenerDistanciaYRuta(idxOrigen, idxDestino, rutaAux, tamAux);
+        
+        int totalKm = (d1 == INF || d2 == INF) ? INF : (d1 + d2);
+
+        cout << i + 1 << ". " << arregloRepartidores[idxRep].Nombre 
+             << " | Ubicacion Actual: Sector " << arregloRepartidores[idxRep].Sector;
+        if (totalKm != INF) {
+            cout << " | Recorrido Est.: " << totalKm << " km";
+        } else {
+            cout << " | [SIN RUTA CONECTADA]";
+        }
+        cout << endl;
     }
 
     int seleccion;
-    cout << "\nSeleccione el numero del repartidor: ";
+    cout << "\nSeleccione el numero del repartidor deseado: ";
     cin >> seleccion;
 
     if (seleccion < 1 || seleccion > contDisponibles) {
@@ -739,135 +671,51 @@ void solicitarEnvio() {
     }
 
     int idxElegido = indicesDisponibles[seleccion - 1];
+    int idxUbicacionElegido = obtenerIndiceSectorPorId(arregloRepartidores[idxElegido].Sector);
 
-    // Asignacion de envio (El repartidor pasa a estar "EN VIAJE")
+    int rutaTramo1[MAX_SECTORES], tam1 = 0;
+    int distTramo1 = obtenerDistanciaYRuta(idxUbicacionElegido, idxOrigen, rutaTramo1, tam1);
+
+    int rutaTramo2[MAX_SECTORES], tam2 = 0;
+    int distTramo2 = obtenerDistanciaYRuta(idxOrigen, idxDestino, rutaTramo2, tam2);
+
+    if (distTramo1 == INF || distTramo2 == INF) {
+        cout << "\n[!] Error: No existe una conexion vial valida en el grafo para esta ruta." << endl;
+        cout << "Presione Enter..."; cin.ignore(); cin.get();
+        return;
+    }
+
     arregloRepartidores[idxElegido].Disponible = false;
     arregloRepartidores[idxElegido].SectorDestino = sectorDestino;
     strcpy(arregloRepartidores[idxElegido].CedulaClienteAtendido, cedulaCliente);
 
     cout << "\n========================================================" << endl;
-    cout << "[ENVIO EN CAMINO]" << endl;
-    cout << "El repartidor " << arregloRepartidores[idxElegido].Nombre 
-         << " va desde Sector " << sectorOrigen 
-         << " hacia Sector " << sectorDestino << "." << endl;
+    cout << "             RUTA Y SERVICIO ASIGNADO                   " << endl;
     cout << "========================================================" << endl;
+    cout << "Repartidor Asignado: " << arregloRepartidores[idxElegido].Nombre << endl;
     
-    cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
-}
-
-void verEstadoPedidosYEnEspera() {
-    cout << "=========================================================" << endl;
-    cout << "           ESTADO DE PEDIDOS Y ENVIOS EN SISTEMA         " << endl;
-    cout << "=========================================================" << endl;
-
-    cout << "\n--- 1. ENVIOS EN CAMINO (EN VIAJE) ---" << endl;
-    bool hayEnViaje = false;
-    for (int i = 0; i < contadorRepartidores; i++) {
-        if (!arregloRepartidores[i].Disponible) {
-            hayEnViaje = true;
-            cout << "- Repartidor: " << arregloRepartidores[i].Nombre 
-                 << " | Cliente C.I: " << arregloRepartidores[i].CedulaClienteAtendido
-                 << " | Origen: Sector " << arregloRepartidores[i].Sector
-                 << " -> Destino: Sector " << arregloRepartidores[i].SectorDestino << endl;
-        }
-    }
-    if (!hayEnViaje) {
-        cout << "No hay repartidores en camino en este momento." << endl;
+    cout << "\n1. Tramo LLegada al Cliente (Sector " << arregloRepartidores[idxElegido].Sector 
+         << " -> Sector " << sectorOrigen << "): " << distTramo1 << " km" << endl;
+    cout << "   Secuencia: ";
+    for (int i = 0; i < tam1; i++) {
+        cout << rutaTramo1[i] << (i < tam1 - 1 ? " -> " : "");
     }
 
-    cout << "\n--- 2. PEDIDOS EN COLA DE ESPERA (POR SECTOR) ---" << endl;
-    bool hayColaGeneral = false;
-    for (int i = 0; i < contadorSectores; i++) {
-        int idSec = listaSectores[i].Id;
-        int idx = obtenerIndiceSectorPorId(idSec);
-        
-        if (idx != -1 && colasEspera[idx].frente != NULL) {
-            hayColaGeneral = true;
-            cout << "\n[SECTOR " << idSec << " - " << listaSectores[i].Direccion << "]:" << endl;
-            
-            NodoCola* actual = colasEspera[idx].frente;
-            int pos = 1;
-            while (actual != NULL) {
-                cout << "  Turno " << pos << " -> Cliente C.I: " << actual->CedulaCliente 
-                     << " | Destino Solicitado: Sector " << actual->SectorDestino << endl;
-                actual = actual->siguiente;
-                pos++;
-            }
-        }
-    }
-    if (!hayColaGeneral) {
-        cout << "No hay clientes esperando en cola en ningun sector." << endl;
+    cout << "\n\n2. Tramo Entrega de Pedido (Sector " << sectorOrigen 
+         << " -> Sector " << sectorDestino << "): " << distTramo2 << " km" << endl;
+    cout << "   Secuencia: ";
+    for (int i = 0; i < tam2; i++) {
+        cout << rutaTramo2[i] << (i < tam2 - 1 ? " -> " : "");
     }
 
-    cout << "\n=========================================================" << endl;
-    cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
-}
-
-void actualizarUbicacionRepartidor() {
-    if (contadorRepartidores == 0) {
-        cout << "\nNo hay repartidores registrados." << endl;
-        cout << "Presione Enter..."; cin.ignore(); cin.get();
-        return;
-    }
-
-    char cedulaBuscar[10];
-    int idxRepartidor = -1;
-
-    cout << "--- MOVER REPARTIDOR LIBRE DE SECTOR ---" << endl;
-    cin.ignore();
-    cout << "Ingrese Cedula del Repartidor: ";
-    cin.getline(cedulaBuscar, 10);
-
-    for (int i = 0; i < contadorRepartidores; i++) {
-        if (strcmp(arregloRepartidores[i].Cedula, cedulaBuscar) == 0) {
-            idxRepartidor = i;
-            break;
-        }
-    }
-
-    if (idxRepartidor == -1) {
-        cout << "\n[!] Error: Repartidor no encontrado." << endl;
-        cout << "Presione Enter..."; cin.get();
-        return;
-    }
-
-    if (!arregloRepartidores[idxRepartidor].Disponible) {
-        cout << "\n[!] El repartidor esta actualmente en un viaje en curso." << endl;
-        cout << "Debe finalizar su entrega en 'Confirmar Llegada / Finalizar Viaje'." << endl;
-        cout << "Presione Enter..."; cin.get();
-        return;
-    }
-
-    int nuevoSector;
-    cout << "Sector Actual: " << arregloRepartidores[idxRepartidor].Sector << endl;
-    cout << "Ingrese ID del Nuevo Sector al que se traslada: ";
-    cin >> nuevoSector;
-
-    arregloRepartidores[idxRepartidor].Sector = nuevoSector;
-
-    cout << "\n========================================================" << endl;
-    cout << "Ubicacion actualizada. Repartidor " << arregloRepartidores[idxRepartidor].Nombre 
-         << " movido al Sector " << nuevoSector << endl;
-
-    if (hayClientesEnEspera(nuevoSector)) {
-        char cedulaCliente[10];
-        int sectorDestino;
-
-        desencolarCliente(nuevoSector, cedulaCliente, sectorDestino);
-
-        arregloRepartidores[idxRepartidor].Disponible = false;
-        arregloRepartidores[idxRepartidor].SectorDestino = sectorDestino;
-        strcpy(arregloRepartidores[idxRepartidor].CedulaClienteAtendido, cedulaCliente);
-
-        cout << "[AUTOMATICO] Se asigno el pedido pendiente del cliente " << cedulaCliente 
-             << " hacia Sector " << sectorDestino << "." << endl;
-    }
+    cout << "\n\nTOTAL RECORRIDO DE LA RUTA: " << (distTramo1 + distTramo2) << " km" << endl;
     cout << "========================================================" << endl;
 
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
 
-void confirmarLlegadaEnvio() {
+void finalizarEnvio() {
+    cout << "\n--- FINALIZAR SERVICIO DE DELIVERY ---" << endl;
     int indicesEnViaje[MAX_REPARTIDORES];
     int contEnViaje = 0;
 
@@ -879,134 +727,150 @@ void confirmarLlegadaEnvio() {
     }
 
     if (contEnViaje == 0) {
-        cout << "\nNo hay envios en camino actualmente." << endl;
-        cout << "Presione Enter para continuar..."; cin.ignore(); cin.get();
+        cout << "No hay repartidores realizando envios actualmente." << endl;
+        cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
         return;
     }
 
-    cout << "--- CONFIRMAR LLEGADA DE ENVIOS EN CURSO ---" << endl;
     for (int i = 0; i < contEnViaje; i++) {
         int idx = indicesEnViaje[i];
         cout << i + 1 << ". Repartidor: " << arregloRepartidores[idx].Nombre 
-             << " | Cliente C.I: " << arregloRepartidores[idx].CedulaClienteAtendido
-             << " | Destino: Sector " << arregloRepartidores[idx].SectorDestino << endl;
+             << " | Llevando a Cliente C.I: " << arregloRepartidores[idx].CedulaClienteAtendido 
+             << " | Hacia Sector: " << arregloRepartidores[idx].SectorDestino << endl;
     }
 
-    int seleccion;
-    cout << "\nSeleccione el numero de la entrega que acaba de LLEGAR: ";
-    cin >> seleccion;
+    int sel;
+    cout << "\nSeleccione el repartidor que ha completado la entrega: ";
+    cin >> sel;
 
-    if (seleccion < 1 || seleccion > contEnViaje) {
+    if (sel < 1 || sel > contEnViaje) {
         cout << "\n[!] Seleccion invalida." << endl;
         cout << "Presione Enter..."; cin.ignore(); cin.get();
         return;
     }
 
-    int idxElegido = indicesEnViaje[seleccion - 1];
+    int idxRep = indicesEnViaje[sel - 1];
+    
+    // Actualizar estadísticas
+    arregloRepartidores[idxRep].Servicios++;
+    arregloRepartidores[idxRep].Sector = arregloRepartidores[idxRep].SectorDestino;
 
-    // 1. Sumar servicio al cliente
-    int idxCliente = -1;
     for (int i = 0; i < contadorClientes; i++) {
-        if (strcmp(arregloClientes[i].Cedula, arregloRepartidores[idxElegido].CedulaClienteAtendido) == 0) {
-            idxCliente = i;
+        if (strcmp(arregloClientes[i].Cedula, arregloRepartidores[idxRep].CedulaClienteAtendido) == 0) {
+            arregloClientes[i].Servicios++;
             break;
         }
     }
 
-    if (idxCliente != -1) {
-        arregloClientes[idxCliente].Servicios++;
+    cout << "\n[+] Envío completado con éxito por " << arregloRepartidores[idxRep].Nombre << "." << endl;
+
+    // Verificar si hay cola de espera en la ubicación actual
+    int sectorActual = arregloRepartidores[idxRep].Sector;
+    char clienteSiguiente[10];
+    int destinoSiguiente;
+
+    if (desencolarCliente(sectorActual, clienteSiguiente, destinoSiguiente)) {
+        arregloRepartidores[idxRep].Disponible = false;
+        arregloRepartidores[idxRep].SectorDestino = destinoSiguiente;
+        strcpy(arregloRepartidores[idxRep].CedulaClienteAtendido, clienteSiguiente);
+        cout << "[!] ATENCION: El repartidor tomó inmediatamente un cliente de la COLA DE ESPERA en el Sector " 
+             << sectorActual << " con destino al Sector " << destinoSiguiente << "." << endl;
+    } else {
+        arregloRepartidores[idxRep].Disponible = true;
+        arregloRepartidores[idxRep].SectorDestino = -1;
+        strcpy(arregloRepartidores[idxRep].CedulaClienteAtendido, "");
+        cout << "[i] El repartidor ahora está DISPONIBLE en el Sector " << sectorActual << "." << endl;
     }
-
-    // 2. Sumar servicio al repartidor y ubicarlo en el sector destino
-    int sectorDondeLlego = arregloRepartidores[idxElegido].SectorDestino;
-
-    arregloRepartidores[idxElegido].Servicios++;
-    arregloRepartidores[idxElegido].Sector = sectorDondeLlego; // Nueva ubicacion
-    arregloRepartidores[idxElegido].Disponible = true;        // Se libera temporalmente
-    arregloRepartidores[idxElegido].SectorDestino = -1;
-    strcpy(arregloRepartidores[idxElegido].CedulaClienteAtendido, "");
-
-    cout << "\n========================================================" << endl;
-    cout << "ENTREGA CONFIRMADA Y FINALIZADA CON EXITO." << endl;
-    cout << "El repartidor " << arregloRepartidores[idxElegido].Nombre 
-         << " se encuentra ahora libre en el Sector " << sectorDondeLlego << "." << endl;
-
-    // Evaluacion e integracion automatica de la Cola de Espera al desocuparse
-    if (hayClientesEnEspera(sectorDondeLlego)) {
-        char cedulaClienteEnEspera[10];
-        int nuevoSectorDestino;
-
-        desencolarCliente(sectorDondeLlego, cedulaClienteEnEspera, nuevoSectorDestino);
-
-        arregloRepartidores[idxElegido].Disponible = false; // Vuelve a ponerse ocupado
-        arregloRepartidores[idxElegido].SectorDestino = nuevoSectorDestino;
-        strcpy(arregloRepartidores[idxElegido].CedulaClienteAtendido, cedulaClienteEnEspera);
-
-        cout << "[AUTOMATICO] Habia pedido en cola. Se asigno al cliente " << cedulaClienteEnEspera 
-             << " hacia Sector " << nuevoSectorDestino << "." << endl;
-    }
-    cout << "========================================================" << endl;
 
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
 
 void menuServicioDiario() {
-    int opServicio;
+    int op;
     do {
-        cout << "\033[2J\033[1;1H";
-        cout << "----- SERVICIO DIARIO -----" << endl;
-        cout << "1. Iniciar Jornada" << endl;
-        cout << "2. Solicitar Envio" << endl;
-        cout << "3. Ver Estado de Pedidos y Envios en Espera" << endl;
-        cout << "4. Mover / Cambiar Sector de Repartidor Libre" << endl;
-        cout << "5. Confirmar Llegada / Finalizar Viaje" << endl;
-        cout << "6. Volver al Menu Principal" << endl;
-        cout << "Seleccione una opcion: ";
-        cin >> opServicio;
-
-        switch (opServicio) {
-            case 1: iniciarJornada(); break;
-            case 2: solicitarEnvio(); break;
-            case 3: verEstadoPedidosYEnEspera(); break;
-            case 4: actualizarUbicacionRepartidor(); break;
-            case 5: confirmarLlegadaEnvio(); break;
-            case 6: break;
-            default: break;
-        }
-    } while (opServicio != 6);
+        cout << "\n--- SERVICIO DIARIO ---" << endl;
+        cout << "1. Solicitar Envio (Ruta Minima)\n2. Finalizar Envio\n3. Volver\nOpcion: ";
+        cin >> op;
+        if (op == 1) solicitarEnvio();
+        else if (op == 2) finalizarEnvio();
+    } while (op != 3);
 }
 
-//  main
+// --- REPORTES ---
+void reporteClientes() {
+    cout << "\n--- REPORTE DE CLIENTES CON MAS SERVICIOS ---" << endl;
+    for (int i = 0; i < contadorClientes - 1; i++) {
+        for (int j = 0; j < contadorClientes - i - 1; j++) {
+            if (arregloClientes[j].Servicios < arregloClientes[j + 1].Servicios) {
+                Cliente temp = arregloClientes[j];
+                arregloClientes[j] = arregloClientes[j + 1];
+                arregloClientes[j + 1] = temp;
+            }
+        }
+    }
+    listaClientes();
+}
+
+void reporteRepartidores() {
+    cout << "\n--- REPORTE DE REPARTIDORES CON MAS SERVICIOS ---" << endl;
+    for (int i = 0; i < contadorRepartidores - 1; i++) {
+        for (int j = 0; j < contadorRepartidores - i - 1; j++) {
+            if (arregloRepartidores[j].Servicios < arregloRepartidores[j + 1].Servicios) {
+                Repartidor temp = arregloRepartidores[j];
+                arregloRepartidores[j] = arregloRepartidores[j + 1];
+                arregloRepartidores[j + 1] = temp;
+            }
+        }
+    }
+    listaRepartidores();
+}
+
+void menuReportes() {
+    int op;
+    do {
+        cout << "\n--- MENU DE REPORTES ---" << endl;
+        cout << "1. Clientes con mas servicios\n2. Repartidores con mas servicios\n3. Volver\nOpcion: ";
+        cin >> op;
+        if (op == 1) reporteClientes();
+        else if (op == 2) reporteRepartidores();
+    } while (op != 3);
+}
 
 int main() {
+    inicializarMatrizGrafo();
     inicializarColas();
+
     cargarSectores();
+    cargarGrafo();
     cargarClientes();
     cargarRepartidores();
 
+    int opcion;
     do {
-        cout << "\033[2J\033[1;1H";
-        cout << "----- MENU PRINCIPAL -----" << endl;
-        cout << "1. Gestion interna" << endl;
-        cout << "2. Servicio diario" << endl;
-        cout << "3. Salir del programa" << endl;
+        cout << "\n=========================================" << endl;
+        cout << "         SPEEDDELIVERY - SISTEMA         " << endl;
+        cout << "=========================================" << endl;
+        cout << "1. Gestion Interna" << endl;
+        cout << "2. Servicio Diario" << endl;
+        cout << "3. Reportes" << endl;
+        cout << "4. Salir" << endl;
         cout << "Seleccione una opcion: ";
-        cin >> opcionPrincipal;
+        cin >> opcion;
 
-        switch (opcionPrincipal) {
+        switch (opcion) {
             case 1: menuGestionInterna(); break;
             case 2: menuServicioDiario(); break;
-            case 3:
-                cout << "\033[2J\033[1;1H";
-                cout << "=== RESPALDANDO DATOS Y GENERANDO REPORTE ===" << endl;
-                generarReporteEstadisticas();
+            case 3: menuReportes(); break;
+            case 4:
+                guardarSectores();
                 guardarClientes();
                 guardarRepartidores();
-                guardarSectores();
-                cout << "\nDatos y reporte estadistico guardados con exito." << endl;
+                liberarMatrizGrafo();
+                cout << "\nSaliendo del programa y liberando memoria del Grafo..." << endl;
                 break;
             default: break;
         }
-    } while (opcionPrincipal != 3);
+    } while (opcion != 4);
+
     return 0;
 }
