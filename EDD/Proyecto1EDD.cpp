@@ -27,13 +27,12 @@ struct Repartidor {
     char Nombre[30];
     char Vehiculo[20];
     char Placa[10];
-    int Sector;                  // Ubicación actual del repartidor
-    int SectorOrigenCliente;     // Sector donde recoge al cliente (-1 si no tiene)
-    int SectorDestinoCliente;    // Sector donde entrega el paquete (-1 si no tiene)
+    int Sector;
+    int SectorOrigenCliente;
+    int SectorDestinoCliente;
     char CedulaClienteAtendido[10]; 
     int Servicios;
-    bool Disponible;             // true: libre | false: asignado o en viaje
-    bool PaqueteRecogido;        // false: en camino al cliente | true: en camino al destino
+    bool Disponible; 
 };
 
 struct NodoCola {
@@ -82,7 +81,7 @@ void liberarMatrizGrafo() {
     }
 }
 
-// --- MANEJO DE COLAS DINAMICAS ---
+// --- MANEJO DE COLAS DINAMICAS (RESPALDO FIFO) ---
 void inicializarColas() {
     for (int i = 0; i < MAX_SECTORES; i++) {
         colasEspera[i].frente = NULL;
@@ -211,7 +210,6 @@ void cargarRepartidores() {
         arregloRepartidores[contadorRepartidores].Disponible = (atoi(dispStr) == 1);
         arregloRepartidores[contadorRepartidores].SectorOrigenCliente = -1;
         arregloRepartidores[contadorRepartidores].SectorDestinoCliente = -1;
-        arregloRepartidores[contadorRepartidores].PaqueteRecogido = false;
         strcpy(arregloRepartidores[contadorRepartidores].CedulaClienteAtendido, "");
         
         contadorRepartidores++;
@@ -255,7 +253,7 @@ void guardarRepartidores() {
     archivo.close();
 }
 
-// --- ALGORITMO DE DIJKSTRA (RUTA MÍNIMA) ---
+// --- ALGORITMO DE DIJKSTRA ---
 int obtenerDistanciaYRuta(int idxOrigen, int idxDestino, int rutaOut[], int &tamRuta) {
     if (idxOrigen == idxDestino) {
         rutaOut[0] = listaSectores[idxOrigen].Id;
@@ -433,7 +431,6 @@ void anadirRepartidor() {
     arregloRepartidores[contadorRepartidores].Disponible = true;
     arregloRepartidores[contadorRepartidores].SectorOrigenCliente = -1;
     arregloRepartidores[contadorRepartidores].SectorDestinoCliente = -1;
-    arregloRepartidores[contadorRepartidores].PaqueteRecogido = false;
     strcpy(arregloRepartidores[contadorRepartidores].CedulaClienteAtendido, "");
 
     contadorRepartidores++;
@@ -489,15 +486,8 @@ void listaRepartidores() {
         cout << i + 1 << ". " << arregloRepartidores[i].Nombre 
              << " | C.I: " << arregloRepartidores[i].Cedula
              << " | Sector Ubicacion: " << arregloRepartidores[i].Sector
-             << " | Estado: ";
-        if (arregloRepartidores[i].Disponible) {
-            cout << "Disponible";
-        } else if (!arregloRepartidores[i].PaqueteRecogido) {
-            cout << "En camino a buscar cliente en Sector " << arregloRepartidores[i].SectorOrigenCliente;
-        } else {
-            cout << "Llevando paquete a Sector " << arregloRepartidores[i].SectorDestinoCliente;
-        }
-        cout << " | Servicios: " << arregloRepartidores[i].Servicios << endl;
+             << " | Estado: " << (arregloRepartidores[i].Disponible ? "Disponible" : "En Trayecto")
+             << " | Servicios: " << arregloRepartidores[i].Servicios << endl;
     }
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
@@ -567,7 +557,7 @@ void menuGestionInterna() {
     } while (op != 4);
 }
 
-// --- FASE 1: SOLICITAR ENVÍO (DESPLAZAMIENTO HACIA CLIENTE O COLA) ---
+// --- REALIZAR PEDIDO Y SELECCIONAR REPARTIDOR (DIJKSTRA) ---
 void solicitarEnvio() {
     if (contadorClientes == 0 || contadorRepartidores == 0) {
         cout << "\nSe requieren clientes y repartidores registrados." << endl;
@@ -597,9 +587,9 @@ void solicitarEnvio() {
         return;
     }
 
-    cout << "Ingrese ID del Sector Origen (Donde esta el cliente): ";
+    cout << "Ingrese ID del Sector Origen (Buscar paquete): ";
     cin >> sectorOrigen;
-    cout << "Ingrese ID del Sector Destino (Donde entrega el paquete): ";
+    cout << "Ingrese ID del Sector Destino (Entregar paquete): ";
     cin >> sectorDestino;
 
     int idxOrigen = obtenerIndiceSectorPorId(sectorOrigen);
@@ -611,7 +601,7 @@ void solicitarEnvio() {
         return;
     }
 
-    // Buscar repartidores disponibles
+    // Filtrar repartidores disponibles
     int indicesDisponibles[MAX_REPARTIDORES];
     int contDisponibles = 0;
 
@@ -622,37 +612,45 @@ void solicitarEnvio() {
         }
     }
 
+    // Caso de respaldo: Si el 100% de repartidores está ocupado
     if (contDisponibles == 0) {
         cout << "\n========================================================" << endl;
-        cout << "[SIN REPARTIDORES DISPONIBLES]" << endl;
-        cout << "El pedido fue asignado a la COLA DE ESPERA del Sector " << sectorOrigen << "." << endl;
+        cout << "[TODOS LOS REPARTIDORES ESTAN OCUPADOS]" << endl;
+        cout << "El pedido ha sido guardado en la COLA DE ESPERA del Sector " << sectorOrigen << "." << endl;
         cout << "========================================================" << endl;
         encolarCliente(sectorOrigen, cedulaCliente, sectorDestino);
         cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
         return;
     }
 
-    cout << "\n--- REPARTIDORES DISPONIBLES EN LA CIUDAD ---" << endl;
+    cout << "\n--- SELECCION DE REPARTIDORES DISPONIBLES ---" << endl;
     for (int i = 0; i < contDisponibles; i++) {
         int idxRep = indicesDisponibles[i];
         int idxUbic = obtenerIndiceSectorPorId(arregloRepartidores[idxRep].Sector);
 
-        int rutaAux[MAX_SECTORES], tamAux = 0;
-        int distLlegada = obtenerDistanciaYRuta(idxUbic, idxOrigen, rutaAux, tamAux);
+        int rAux1[MAX_SECTORES], tAux1 = 0;
+        int rAux2[MAX_SECTORES], tAux2 = 0;
+
+        int d1 = obtenerDistanciaYRuta(idxUbic, idxOrigen, rAux1, tAux1);
+        int d2 = obtenerDistanciaYRuta(idxOrigen, idxDestino, rAux2, tAux2);
+        int dTotal = (d1 == INF || d2 == INF) ? INF : (d1 + d2);
 
         cout << i + 1 << ". " << arregloRepartidores[idxRep].Nombre 
-             << " | Ubicacion: Sector " << arregloRepartidores[idxRep].Sector;
-        if (distLlegada != INF) cout << " | Distancia al Cliente: " << distLlegada << " km";
-        else cout << " | [SIN CONEXION VIAL]";
+             << " | Ubicacion actual: Sector " << arregloRepartidores[idxRep].Sector;
+        if (dTotal != INF) {
+            cout << " | Recorrido Total Est.: " << dTotal << " km (" << d1 << "km recoleccion + " << d2 << "km entrega)";
+        } else {
+            cout << " | [SIN CONEXION VIAL]";
+        }
         cout << endl;
     }
 
     int seleccion;
-    cout << "\nSeleccione el numero del repartidor a enviar: ";
+    cout << "\n¿Que repartidor desea asignar para el pedido?: ";
     cin >> seleccion;
 
     if (seleccion < 1 || seleccion > contDisponibles) {
-        cout << "\n[!] Seleccion invalida." << endl;
+        cout << "\n[!] Seleccion invalida. Operacion cancelada." << endl;
         cout << "Presione Enter..."; cin.ignore(); cin.get();
         return;
     }
@@ -660,140 +658,86 @@ void solicitarEnvio() {
     int idxElegido = indicesDisponibles[seleccion - 1];
     int idxUbicElegido = obtenerIndiceSectorPorId(arregloRepartidores[idxElegido].Sector);
 
-    int rutaLlegada[MAX_SECTORES], tamLlegada = 0;
-    int distLlegada = obtenerDistanciaYRuta(idxUbicElegido, idxOrigen, rutaLlegada, tamLlegada);
+    int rTramo1[MAX_SECTORES], tam1 = 0;
+    int dist1 = obtenerDistanciaYRuta(idxUbicElegido, idxOrigen, rTramo1, tam1);
 
-    if (distLlegada == INF) {
-        cout << "\n[!] Error: No hay ruta disponible para que este repartidor llegue al sector del cliente." << endl;
+    int rTramo2[MAX_SECTORES], tam2 = 0;
+    int dist2 = obtenerDistanciaYRuta(idxOrigen, idxDestino, rTramo2, tam2);
+
+    if (dist1 == INF || dist2 == INF) {
+        cout << "\n[!] Error: No hay conexion de red vial para completar la ruta con este repartidor." << endl;
         cout << "Presione Enter..."; cin.ignore(); cin.get();
         return;
     }
 
-    // Asignar primera fase (En camino a buscar paquete)
+    // Asignación inmediata al listado de viajes en trayecto
     arregloRepartidores[idxElegido].Disponible = false;
-    arregloRepartidores[idxElegido].PaqueteRecogido = false;
     arregloRepartidores[idxElegido].SectorOrigenCliente = sectorOrigen;
     arregloRepartidores[idxElegido].SectorDestinoCliente = sectorDestino;
     strcpy(arregloRepartidores[idxElegido].CedulaClienteAtendido, cedulaCliente);
 
     cout << "\n========================================================" << endl;
-    cout << "             FASE 1: REPARTIDOR EN CAMINO               " << endl;
+    cout << "             PEDIDO ASIGNADO Y EN TRAYECTO              " << endl;
     cout << "========================================================" << endl;
-    cout << "Repartidor " << arregloRepartidores[idxElegido].Nombre 
-         << " va en camino al Sector " << sectorOrigen << endl;
-    cout << "Distancia a recorrer: " << distLlegada << " km" << endl;
-    cout << "Ruta mínima a seguir: ";
-    for (int i = 0; i < tamLlegada; i++) {
-        cout << rutaLlegada[i] << (i < tamLlegada - 1 ? " -> " : "");
-    }
-    cout << "\n========================================================" << endl;
-
-    cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
-}
-
-// --- FASE 2: CONFIRMAR LLEGADA Y DESPACHAR A DESTINO ---
-void confirmarLlegadaYDespachar() {
-    int indicesEnCamino[MAX_REPARTIDORES];
-    int contEnCamino = 0;
-
-    for (int i = 0; i < contadorRepartidores; i++) {
-        if (!arregloRepartidores[i].Disponible && !arregloRepartidores[i].PaqueteRecogido) {
-            indicesEnCamino[contEnCamino] = i;
-            contEnCamino++;
-        }
-    }
-
-    if (contEnCamino == 0) {
-        cout << "\nNo hay repartidores en camino a recoger clientes actualmente." << endl;
-        cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
-        return;
-    }
-
-    cout << "\n--- REPARTIDORES EN CAMINO A BUSCAR PAQUETE ---" << endl;
-    for (int i = 0; i < contEnCamino; i++) {
-        int idx = indicesEnCamino[i];
-        cout << i + 1 << ". Repartidor: " << arregloRepartidores[idx].Nombre 
-             << " | Dirigiendose al Sector Origen: " << arregloRepartidores[idx].SectorOrigenCliente 
-             << " (Cliente C.I: " << arregloRepartidores[idx].CedulaClienteAtendido << ")" << endl;
-    }
-
-    int sel;
-    cout << "\nSeleccione el repartidor que ha LLEGADO donde el cliente: ";
-    cin >> sel;
-
-    if (sel < 1 || sel > contEnCamino) {
-        cout << "\n[!] Seleccion invalida." << endl;
-        cout << "Presione Enter..."; cin.ignore(); cin.get();
-        return;
-    }
-
-    int idxRep = indicesEnCamino[sel - 1];
+    cout << "Repartidor: " << arregloRepartidores[idxElegido].Nombre << endl;
+    cout << "Cliente C.I: " << cedulaCliente << endl;
     
-    // Actualizar ubicación física al sector del cliente y cambiar estado
-    arregloRepartidores[idxRep].Sector = arregloRepartidores[idxRep].SectorOrigenCliente;
-    arregloRepartidores[idxRep].PaqueteRecogido = true;
+    cout << "\n1. Tramo Recoleccion (Sector " << arregloRepartidores[idxElegido].Sector 
+         << " -> Sector " << sectorOrigen << "): " << dist1 << " km" << endl;
+    cout << "   Ruta: ";
+    for (int i = 0; i < tam1; i++) cout << rTramo1[i] << (i < tam1 - 1 ? " -> " : "");
 
-    int idxOrigen = obtenerIndiceSectorPorId(arregloRepartidores[idxRep].SectorOrigenCliente);
-    int idxDestino = obtenerIndiceSectorPorId(arregloRepartidores[idxRep].SectorDestinoCliente);
+    cout << "\n\n2. Tramo Entrega (Sector " << sectorOrigen 
+         << " -> Sector " << sectorDestino << "): " << dist2 << " km" << endl;
+    cout << "   Ruta: ";
+    for (int i = 0; i < tam2; i++) cout << rTramo2[i] << (i < tam2 - 1 ? " -> " : "");
 
-    int rutaEntrega[MAX_SECTORES], tamEntrega = 0;
-    int distEntrega = obtenerDistanciaYRuta(idxOrigen, idxDestino, rutaEntrega, tamEntrega);
-
-    cout << "\n========================================================" << endl;
-    cout << "             FASE 2: PAQUETE RECOGIDO                   " << endl;
+    cout << "\n\nDISTANCIA TOTAL A RECORRER: " << (dist1 + dist2) << " km" << endl;
     cout << "========================================================" << endl;
-    cout << "El repartidor " << arregloRepartidores[idxRep].Nombre 
-         << " recogio el paquete en Sector " << arregloRepartidores[idxRep].SectorOrigenCliente << endl;
-    cout << "Iniciando viaje hacia Sector Destino: " << arregloRepartidores[idxRep].SectorDestinoCliente << endl;
-    cout << "Distancia del viaje: " << distEntrega << " km" << endl;
-    cout << "Ruta mínima a seguir: ";
-    for (int i = 0; i < tamEntrega; i++) {
-        cout << rutaEntrega[i] << (i < tamEntrega - 1 ? " -> " : "");
-    }
-    cout << "\n========================================================" << endl;
 
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
 
-// --- FASE 3: FINALIZAR ENTREGA Y REVISAR COLA DE ESPERA ---
+// --- CONFIRMAR LLEGADA Y FINALIZAR ENTREGA ---
 void finalizarEnvio() {
-    int indicesLlevando[MAX_REPARTIDORES];
-    int contLlevando = 0;
+    int indicesEnTrayecto[MAX_REPARTIDORES];
+    int contEnTrayecto = 0;
 
     for (int i = 0; i < contadorRepartidores; i++) {
-        if (!arregloRepartidores[i].Disponible && arregloRepartidores[i].PaqueteRecogido) {
-            indicesLlevando[contLlevando] = i;
-            contLlevando++;
+        if (!arregloRepartidores[i].Disponible) {
+            indicesEnTrayecto[contEnTrayecto] = i;
+            contEnTrayecto++;
         }
     }
 
-    if (contLlevando == 0) {
-        cout << "\nNo hay repartidores realizando la entrega del paquete actualmente." << endl;
+    if (contEnTrayecto == 0) {
+        cout << "\nNo hay envios activos o repartidores en trayecto actualmente." << endl;
         cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
         return;
     }
 
-    cout << "\n--- REPARTIDORES EN TRAYECTO DE ENTREGA ---" << endl;
-    for (int i = 0; i < contLlevando; i++) {
-        int idx = indicesLlevando[i];
+    cout << "\n--- ENVIOS ACTIVOS EN TRAYECTO ---" << endl;
+    for (int i = 0; i < contEnTrayecto; i++) {
+        int idx = indicesEnTrayecto[i];
         cout << i + 1 << ". Repartidor: " << arregloRepartidores[idx].Nombre 
-             << " | Llevando a Cliente C.I: " << arregloRepartidores[idx].CedulaClienteAtendido 
-             << " | Destino Final: Sector " << arregloRepartidores[idx].SectorDestinoCliente << endl;
+             << " | Cliente C.I: " << arregloRepartidores[idx].CedulaClienteAtendido 
+             << " | Desde Sector " << arregloRepartidores[idx].SectorOrigenCliente
+             << " -> Hacia Sector " << arregloRepartidores[idx].SectorDestinoCliente << endl;
     }
 
     int sel;
-    cout << "\nSeleccione el repartidor que ha COMPLETADO la entrega: ";
+    cout << "\nSeleccione el numero del envío que ha COMPLETADO la entrega: ";
     cin >> sel;
 
-    if (sel < 1 || sel > contLlevando) {
+    if (sel < 1 || sel > contEnTrayecto) {
         cout << "\n[!] Seleccion invalida." << endl;
         cout << "Presione Enter..."; cin.ignore(); cin.get();
         return;
     }
 
-    int idxRep = indicesLlevando[sel - 1];
+    int idxRep = indicesEnTrayecto[sel - 1];
     
-    // Actualizar estadísticas y moverlo al sector de destino
+    // Actualizar estadísticas y reubicar al repartidor en el sector destino
     arregloRepartidores[idxRep].Servicios++;
     arregloRepartidores[idxRep].Sector = arregloRepartidores[idxRep].SectorDestinoCliente;
 
@@ -804,38 +748,36 @@ void finalizarEnvio() {
         }
     }
 
-    cout << "\n[+] Envío completado con exito por " << arregloRepartidores[idxRep].Nombre 
-         << ". Ahora se encuentra en Sector " << arregloRepartidores[idxRep].Sector << "." << endl;
+    cout << "\n[+] ¡Envío entregado con éxito por " << arregloRepartidores[idxRep].Nombre << "!" << endl;
+    cout << "    Ubicación actual del repartidor: Sector " << arregloRepartidores[idxRep].Sector << "." << endl;
 
-    // Verificar si hay clientes esperando en la COLA de este Sector
+    // Verificar si hay cola de espera en la ubicación actual
     int sectorActual = arregloRepartidores[idxRep].Sector;
     char clienteSiguiente[10];
     int destinoSiguiente;
 
     if (desencolarCliente(sectorActual, clienteSiguiente, destinoSiguiente)) {
         arregloRepartidores[idxRep].Disponible = false;
-        arregloRepartidores[idxRep].PaqueteRecogido = true; // Ya está en el sector del cliente
         arregloRepartidores[idxRep].SectorOrigenCliente = sectorActual;
         arregloRepartidores[idxRep].SectorDestinoCliente = destinoSiguiente;
         strcpy(arregloRepartidores[idxRep].CedulaClienteAtendido, clienteSiguiente);
 
-        cout << "\n[!] ATENCION: El repartidor tomó inmediatamente a un cliente de la COLA DE ESPERA." << endl;
-        cout << "    Cliente C.I: " << clienteSiguiente << " con destino al Sector " << destinoSiguiente << "." << endl;
+        cout << "\n[!] ATENCION: Había un pedido en COLA DE ESPERA en este sector." << endl;
+        cout << "    El repartidor tomó automáticamente al cliente C.I: " << clienteSiguiente 
+             << " con destino al Sector " << destinoSiguiente << "." << endl;
     } else {
         arregloRepartidores[idxRep].Disponible = true;
-        arregloRepartidores[idxRep].PaqueteRecogido = false;
         arregloRepartidores[idxRep].SectorOrigenCliente = -1;
         arregloRepartidores[idxRep].SectorDestinoCliente = -1;
         strcpy(arregloRepartidores[idxRep].CedulaClienteAtendido, "");
-        cout << "[i] No hay cola en este sector. Repartidor marcado como DISPONIBLE." << endl;
+        cout << "[i] El repartidor ahora se encuentra DISPONIBLE para nuevos pedidos." << endl;
     }
 
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
 
-// --- MENÚ Y PROCESAR COLA MANUALMENTE ---
 void consultarColasDeEspera() {
-    cout << "\n--- ESTADO DE LAS COLAS DE ESPERA POR SECTOR ---" << endl;
+    cout << "\n--- CONSULTA DE COLAS DE ESPERA POR SECTOR ---" << endl;
     bool hayColas = false;
 
     for (int i = 0; i < contadorSectores; i++) {
@@ -854,7 +796,7 @@ void consultarColasDeEspera() {
     }
 
     if (!hayColas) {
-        cout << "No hay clientes en cola de espera en ningun sector." << endl;
+        cout << "No hay clientes retenidos en cola de espera en ningun sector." << endl;
     }
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
 }
@@ -863,19 +805,17 @@ void menuServicioDiario() {
     int op;
     do {
         cout << "\n--- SERVICIO DIARIO ---" << endl;
-        cout << "1. Solicitar Envio (Fase 1: Asignar Repartidor)" << endl;
-        cout << "2. Confirmar Llegada a Cliente (Fase 2: En Camino a Destino)" << endl;
-        cout << "3. Finalizar Envio (Fase 3: Entregar y Procesar Cola)" << endl;
-        cout << "4. Consultar Colas de Espera" << endl;
-        cout << "5. Volver" << endl;
+        cout << "1. Realizar Pedido y Asignar Repartidor (Ruta Minima)" << endl;
+        cout << "2. Confirmar Entrega de Pedido" << endl;
+        cout << "3. Consultar Colas de Espera" << endl;
+        cout << "4. Volver" << endl;
         cout << "Opcion: ";
         cin >> op;
 
         if (op == 1) solicitarEnvio();
-        else if (op == 2) confirmarLlegadaYDespachar();
-        else if (op == 3) finalizarEnvio();
-        else if (op == 4) consultarColasDeEspera();
-    } while (op != 5);
+        else if (op == 2) finalizarEnvio();
+        else if (op == 3) consultarColasDeEspera();
+    } while (op != 4);
 }
 
 // --- REPORTES ---
