@@ -626,7 +626,7 @@ void solicitarEnvio() {
         cout << i + 1 << ". " << arregloRepartidores[idxRep].Nombre 
              << " | Ubicacion actual: Sector " << arregloRepartidores[idxRep].Sector;
         if (dTotal != INF) {
-            cout << " | Recorrido Total Est.: " << dTotal << " km (" << d1 << "km recoleccion + " << d2 << "km entrega)";
+            cout << " | Recorrido Total Estimado: " << dTotal << " km";
         } else {
             cout << " | [SIN CONEXION VIAL]";
         }
@@ -634,7 +634,7 @@ void solicitarEnvio() {
     }
 
     int seleccion;
-    cout << "\n¿Que repartidor desea asignar para el pedido?: ";
+    cout << "\nQue repartidor desea asignar para el pedido?: ";
     cin >> seleccion;
 
     if (seleccion < 1 || seleccion > contDisponibles) {
@@ -671,14 +671,10 @@ void solicitarEnvio() {
     
     cout << "\n1. Tramo Recoleccion (Sector " << arregloRepartidores[idxElegido].Sector 
          << " -> Sector " << sectorOrigen << "): " << dist1 << " km" << endl;
-    cout << "   Ruta: ";
-    for (int i = 0; i < tam1; i++) cout << rTramo1[i] << (i < tam1 - 1 ? " -> " : "");
-
+    
     cout << "\n\n2. Tramo Entrega (Sector " << sectorOrigen 
          << " -> Sector " << sectorDestino << "): " << dist2 << " km" << endl;
-    cout << "   Ruta: ";
-    for (int i = 0; i < tam2; i++) cout << rTramo2[i] << (i < tam2 - 1 ? " -> " : "");
-
+    
     cout << "\n\nDISTANCIA TOTAL A RECORRER: " << (dist1 + dist2) << " km" << endl;
     cout << "========================================================" << endl;
 
@@ -733,7 +729,7 @@ void finalizarEnvio() {
         }
     }
 
-    cout << "\n¡Envio entregado con exito por " << arregloRepartidores[idxRep].Nombre << "!" << endl;
+    cout << "\nEnvio entregado con exito por " << arregloRepartidores[idxRep].Nombre << endl;
     cout << "    Ubicacion actual del repartidor: Sector " << arregloRepartidores[idxRep].Sector << "." << endl;
 
     int sectorActual = arregloRepartidores[idxRep].Sector;
@@ -754,7 +750,7 @@ void finalizarEnvio() {
         arregloRepartidores[idxRep].SectorOrigenCliente = -1;
         arregloRepartidores[idxRep].SectorDestinoCliente = -1;
         strcpy(arregloRepartidores[idxRep].CedulaClienteAtendido, "");
-        cout << "El repartidor ahora se encuentra DISPONIBLE para nuevos pedidos." << endl;
+        cout << "El repartidor ahora se encuentra disponible" << endl;
     }
 
     cout << "\nPresione Enter para continuar..."; cin.ignore(); cin.get();
@@ -789,7 +785,7 @@ void menuServicioDiario() {
     int op;
     do {
         cout << "\n--- SERVICIO DIARIO ---" << endl;
-        cout << "1. Realizar Pedido y Asignar Repartidor (Ruta Minima)" << endl;
+        cout << "1. Realizar Pedido y Asignar Repartidor" << endl;
         cout << "2. Confirmar Entrega de Pedido" << endl;
         cout << "3. Consultar Colas de Espera" << endl;
         cout << "4. Volver" << endl;
@@ -871,7 +867,7 @@ int main() {
                 guardarClientes();
                 guardarRepartidores();
                 liberarMatrizGrafo();
-                cout << "\nSaliendo del programa y liberando memoria del Grafo..." << endl;
+                cout << "\nSaliendo del programa..." << endl;
                 break;
             default: break;
         }
